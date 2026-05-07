@@ -10,7 +10,7 @@
 =================================================================
 == 🎯 Resumo do vídeo:
 =================================================================
-📍 O que é um usuário no Oracle
+📍 O que é um usuário no Oracle XXX
 📍 Diferença entre usuário e schema
 📍 Usuários administrativos padrão do Oracle
 📍 Autenticação via sistema operacional
