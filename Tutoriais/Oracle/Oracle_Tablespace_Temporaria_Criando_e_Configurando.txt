@@ -1,0 +1,233 @@
+========================================================================================
+== Oracle Temporary Tablespace - Criando e Configurando
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 O que é uma Tablespace Temporária
+📍 Criando Tablespace Temporária Smallfile
+📍 Criando Tablespace Temporária Bigfile
+📍 Criando com OMF (Oracle Managed Files)
+📍 Criando em ASM
+📍 Adicionando mais de um Tempfile
+📍 Associando um usuário à Tablespace Temporária
+📍 Consultando informações no dicionário de dados
+📍 Boas Práticas e Conclusão
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ A Tablespace Temporária armazena segmentos temporários gerados por operações como sorts, hash joins e criação de índices
+▶️ O Oracle utiliza a tablespace temporária padrão (geralmente TEMP) para usuários que não têm uma definida explicitamente
+▶️ Diferente das tablespaces permanentes, os dados temporários são descartados ao final da sessão ou transação
+▶️ É possível ter múltiplas tablespaces temporárias no banco, inclusive com diferentes características (smallfile, bigfile, OMF, ASM)
+▶️ A partir do Oracle 12c, é possível definir uma Temporary Tablespace Default no nível do banco
+⚠️ Nunca use a tablespace SYSTEM ou uma tablespace permanente como temporária para usuários de aplicação
+
+
+=================================================================
+== 🎯 Criando Tablespace Temporária Smallfile
+=================================================================
+▶️ Formato tradicional: suporta múltiplos tempfiles, com limite de até 4 milhões de blocos por arquivo
+▶️ Ideal quando se deseja distribuir os arquivos em diferentes discos ou volumes
+
+-- Criação simples com caminho explícito:
+SQL> CREATE TEMPORARY TABLESPACE temp_app
+     TEMPFILE '/u01/app/oracle/oradata/cdb1/temp_app01.dbf'
+     SIZE 500M
+     AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
+
+-- Verificando a criação:
+SQL> SELECT tablespace_name, status, contents
+     FROM dba_tablespaces
+     WHERE tablespace_name = 'TEMP_APP';
+
+
+=================================================================
+== 🎯 Criando Tablespace Temporária Bigfile
+=================================================================
+▶️ Permite apenas UM tempfile, mas de tamanho muito maior (até 128TB dependendo do block size)
+▶️ Simplifica o gerenciamento e é indicada para ambientes com grandes volumes de dados temporários
+▶️ Muito utilizada em ambientes de Data Warehouse com operações de sort intensivas
+
+SQL> CREATE BIGFILE TEMPORARY TABLESPACE temp_big
+     TEMPFILE '/u01/app/oracle/oradata/cdb1/temp_big01.dbf'
+     SIZE 10G
+     AUTOEXTEND ON NEXT 1G MAXSIZE UNLIMITED;
+
+💡 Para verificar se é bigfile ou smallfile:
+SQL> SELECT tablespace_name, bigfile
+     FROM dba_tablespaces
+     WHERE contents = 'TEMPORARY';
+
+
+=================================================================
+== 🎯 Criando com OMF (Oracle Managed Files)
+=================================================================
+▶️ Com OMF, o Oracle gerencia automaticamente o nome e o local dos arquivos
+▶️ Basta ter o parâmetro DB_CREATE_FILE_DEST configurado
+
+-- Verificando o parâmetro OMF:
+SQL> SHOW PARAMETER db_create_file_dest;
+
+-- Configurando o parâmetro (se necessário):
+SQL> ALTER SYSTEM SET db_create_file_dest='/u01/app/oracle/oradata/cdb1/' SCOPE=BOTH;
+
+-- Criando a tablespace temporária com OMF (sem informar o nome do arquivo):
+SQL> CREATE TEMPORARY TABLESPACE temp_omf
+     TEMPFILE SIZE 500M
+     AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
+
+💡 O Oracle cria e gerencia o arquivo automaticamente, incluindo a exclusão quando a tablespace for removida
+
+
+=================================================================
+== 🎯 Criando em ASM (Automatic Storage Management)
+=================================================================
+▶️ Em ambientes com ASM, o tempfile é criado diretamente no diskgroup
+▶️ O ASM gerencia o balanceamento e a redundância dos arquivos
+
+-- Verificando os diskgroups disponíveis:
+SQL> SELECT name, state, type FROM v$asm_diskgroup;
+
+-- Criando a tablespace temporária no ASM:
+SQL> CREATE TEMPORARY TABLESPACE temp_asm
+     TEMPFILE '+DATA'
+     SIZE 1G
+     AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
+
+-- Criando em diskgroup específico com redundância:
+SQL> CREATE TEMPORARY TABLESPACE temp_asm_fra
+     TEMPFILE '+FRA'
+     SIZE 500M
+     AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
+
+💡 Para ver os tempfiles criados no ASM:
+SQL> SELECT file_name FROM dba_temp_files
+     WHERE tablespace_name IN ('TEMP_ASM', 'TEMP_ASM_FRA');
+
+
+=================================================================
+== 🎯 Adicionando mais de um Tempfile
+=================================================================
+▶️ Em tablespaces smallfile, é possível adicionar múltiplos tempfiles para aumentar a capacidade ou distribuir I/O
+▶️ Muito útil quando se esgota o espaço disponível em um único volume
+
+-- Adicionando um segundo tempfile à tablespace:
+SQL> ALTER TABLESPACE temp_app
+     ADD TEMPFILE '/u02/app/oracle/oradata/cdb1/temp_app02.dbf'
+     SIZE 500M
+     AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
+
+-- Adicionando um terceiro tempfile em outro volume:
+SQL> ALTER TABLESPACE temp_app
+     ADD TEMPFILE '/u03/app/oracle/oradata/cdb1/temp_app03.dbf'
+     SIZE 1G
+     AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
+
+-- Listando todos os tempfiles da tablespace:
+SQL> SELECT file_name, bytes/1024/1024 AS size_mb,
+            autoextensible, maxbytes/1024/1024 AS maxsize_mb
+     FROM dba_temp_files
+     WHERE tablespace_name = 'TEMP_APP'
+     ORDER BY file_id;
+
+⚠️ Tablespaces Bigfile aceitam apenas um tempfile — use ALTER DATABASE DATAFILE para redimensionar
+
+
+=================================================================
+== 🎯 Associando um Usuário à Tablespace Temporária
+=================================================================
+▶️ Por padrão, usuários herdam a tablespace temporária padrão do banco
+▶️ É uma boa prática definir explicitamente a tablespace temporária por usuário ou perfil de aplicação
+
+-- Verificando a tablespace temporária padrão do banco:
+SQL> SELECT property_name, property_value
+     FROM database_properties
+     WHERE property_name = 'DEFAULT_TEMP_TABLESPACE';
+
+-- Definindo a tablespace temporária no momento da criação do usuário:
+SQL> CREATE USER app_user
+     IDENTIFIED BY "SenhaForte#2026"
+     DEFAULT TABLESPACE users
+     TEMPORARY TABLESPACE temp_app
+     QUOTA UNLIMITED ON users;
+
+-- Alterando a tablespace temporária de um usuário existente:
+SQL> ALTER USER app_user TEMPORARY TABLESPACE temp_app;
+
+-- Verificando a configuração do usuário:
+SQL> SELECT username, temporary_tablespace
+     FROM dba_users
+     WHERE username = 'APP_USER';
+
+-- Alterando a tablespace temporária padrão do banco (afeta todos os usuários sem definição explícita):
+SQL> ALTER DATABASE DEFAULT TEMPORARY TABLESPACE temp_app;
+
+💡 Para reverter à TEMP original:
+SQL> ALTER DATABASE DEFAULT TEMPORARY TABLESPACE temp;
+
+
+=================================================================
+== 🎯 Consultando informações no dicionário de dados
+=================================================================
+-- Listando todas as tablespaces temporárias do banco:
+SQL> SELECT tablespace_name, status, bigfile, extent_management
+     FROM dba_tablespaces
+     WHERE contents = 'TEMPORARY'
+     ORDER BY tablespace_name;
+
+-- Detalhes dos tempfiles:
+SQL> SELECT f.tablespace_name,
+            f.file_name,
+            f.bytes/1024/1024        AS size_mb,
+            f.autoextensible,
+            f.maxbytes/1024/1024     AS maxsize_mb
+     FROM dba_temp_files f
+     ORDER BY f.tablespace_name, f.file_id;
+
+-- Uso atual das tablespaces temporárias (sessões ativas):
+SQL> SELECT tablespace_name,
+            allocated_space/1024/1024  AS allocated_mb,
+            free_space/1024/1024       AS free_mb
+     FROM dba_temp_free_space
+     ORDER BY tablespace_name;
+
+-- Verificando qual usuário está usando espaço temporário no momento:
+SQL> SELECT s.username,
+            s.sid,
+            s.serial#,
+            t.tablespace,
+            t.blocks * 8192/1024/1024 AS used_mb
+     FROM v$sort_usage t
+     JOIN v$session s ON s.saddr = t.session_addr
+     ORDER BY used_mb DESC;
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Sempre crie tablespaces temporárias separadas por tipo de carga (OLTP, batch, DW) para evitar contenção
+💡 Monitore o uso de espaço temporário regularmente — picos podem indicar queries mal otimizadas
+💡 Em ambientes com ASM, prefira criar tempfiles no diskgroup dedicado a dados
+💡 Use AUTOEXTEND com MAXSIZE definido para evitar crescimento descontrolado
+💡 Nunca use DROP TABLESPACE sem confirmar que nenhum usuário está apontando para ela
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ Tablespaces temporárias são essenciais para o funcionamento eficiente do Oracle
+▶️ Smallfile oferece flexibilidade com múltiplos tempfiles; Bigfile simplifica o gerenciamento de grandes volumes
+▶️ OMF e ASM eliminam a necessidade de gerenciar caminhos de arquivo manualmente
+▶️ Associar corretamente os usuários às tablespaces temporárias evita contenção e facilita o monitoramento
+▶️ Consulte regularmente o dicionário de dados para garantir que o ambiente está saudável
