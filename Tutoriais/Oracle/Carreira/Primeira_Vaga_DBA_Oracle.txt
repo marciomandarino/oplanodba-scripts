@@ -1,0 +1,227 @@
+========================================================================================
+== Como conseguir seu primeiro emprego de DBA Oracle (mesmo sem experiência)
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 O que aprender ANTES da primeira vaga (priorizado)
+📍 Como construir portfólio sem experiência
+📍 Onde procurar (e onde NÃO procurar) vagas
+📍 Como se preparar para a entrevista técnica
+📍 As perguntas mais comuns em entrevista de DBA Junior
+📍 Erros que eliminam candidatos imediatamente
+📍 Negociar a primeira proposta
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ A primeira vaga de DBA é a mais difícil — depois disso, fica mais fácil mover
+▶️ A maioria dos juniores tenta entrar pelo caminho errado: fazendo curso atrás de curso
+▶️ A verdade: empresas contratam quem CONSEGUE FAZER, não quem só estudou
+▶️ Esse vídeo é o roteiro que eu daria pra mim mesmo se fosse começar hoje em 2026
+⚠️ Não existe "atalho" — mas existe "ordem certa" das coisas
+
+
+=================================================================
+== 🎯 O que aprender ANTES da primeira vaga (priorizado)
+=================================================================
+▶️ A ordem importa MUITO — aprenda nessa sequência:
+
+1️⃣ FUNDAMENTOS (1-2 meses)
+   ▫️ Modelo relacional: tabelas, chaves, normalização
+   ▫️ SQL básico-intermediário: SELECT, JOIN, GROUP BY, subqueries, CTEs
+   ▫️ Linux básico: comandos de arquivo, processos, redirecionamento, vi/vim
+   ▫️ Conceitos de banco: ACID, transações, índices
+
+2️⃣ ARQUITETURA ORACLE (2-3 meses)
+   ▫️ Instance vs Database (memória, processos, datafiles)
+   ▫️ Multitenant: CDB, PDB, container roots
+   ▫️ Tablespaces, datafiles, redo logs, control files
+   ▫️ Listener, tnsnames, conexões
+
+3️⃣ TAREFAS DO DIA-A-DIA (2-3 meses)
+   ▫️ Criar/alterar/dropar usuários, tablespaces, tabelas
+   ▫️ Backup com RMAN (full, incremental, restore básico)
+   ▫️ Datapump (export/import)
+   ▫️ Monitoramento básico: sessões, espaço, locks
+   ▫️ Logs do banco (alert.log, listener.log)
+
+4️⃣ INSTALAÇÃO E SETUP (1 mês)
+   ▫️ Instalar Oracle Linux (VirtualBox)
+   ▫️ Instalar Oracle 19c ou 23ai (RPM ou runInstaller)
+   ▫️ Criar database via dbca ou silent mode
+   ▫️ Subir/parar banco, configurar listener
+
+⚠️ Total: ~6-8 meses estudando ~2h/dia
+⚠️ Não pule pra "tópicos avançados" (RAC, Exadata) antes — não vai ser cobrado em entrevista de Junior
+
+
+=================================================================
+== 🎯 Como construir portfólio sem experiência
+=================================================================
+▶️ Esse é o segredo que separa quem consegue da primeira vaga em 6 meses vs 2 anos
+▶️ Empresas precisam VER que você consegue fazer — não só ler no currículo
+
+1️⃣ MONTE UM LAB PESSOAL
+   ▫️ VirtualBox + Oracle Linux 8 + Oracle 19c (gratuito)
+   ▫️ Crie 2 CDBs com PDBs diferentes
+   ▫️ Trabalhe nesse lab toda semana
+
+2️⃣ DOCUMENTE TUDO NO GITHUB
+   ▫️ Repositório público com seus scripts e roteiros
+   ▫️ README explicando cada projeto
+   ▫️ Commits frequentes (mostra constância)
+   ▫️ Exemplo: pasta "backup-rman" com 3 cenários reais documentados
+
+3️⃣ ESCREVA NO LINKEDIN OU BLOG
+   ▫️ 1 post por semana documentando algo que você aprendeu
+   ▫️ Não precisa ser revolucionário — pode ser "como criar uma tablespace temporária"
+   ▫️ Recrutadores procuram quem é encontrável
+
+4️⃣ CERTIFICAÇÕES (opcional, mas ajuda)
+   ▫️ Oracle Database Foundations (gratuita) — nível inicial
+   ▫️ OCA 19c — peso real no currículo
+   ▫️ Não precisa ter pra primeira vaga, mas diferencia
+
+5️⃣ COMUNIDADE
+   ▫️ Participe de canais no Discord/Telegram de DBA
+   ▫️ Responda perguntas no LinkedIn
+   ▫️ Vai networking + você aprende ensinando
+
+
+=================================================================
+== 🎯 Onde procurar (e onde NÃO procurar)
+=================================================================
+✅ ONDE procurar:
+   ▫️ LinkedIn (filtro: DBA Oracle Junior, BR e remoto LATAM)
+   ▫️ Vagas.com, Catho, Indeed (filtros de seniority Junior)
+   ▫️ Sites das empresas: bancos, fintechs, e-commerces grandes
+   ▫️ Indicação interna (peça pro pessoal das comunidades)
+   ▫️ Empresas de consultoria DBA (Insider, Nimbi, MTec, etc.)
+
+⚠️ ONDE NÃO perder tempo:
+   ▫️ Vagas que pedem "5 anos de experiência" pra Junior (impossível)
+   ▫️ "Estágios" que cobram experiência prévia
+   ▫️ Empresas com avaliação <3 no Glassdoor (ambiente ruim de aprender)
+   ▫️ Vagas de "DBA Pleno OU Junior" pagando salário de Junior — armadilha
+
+💡 No primeiro emprego, prefira:
+   ▫️ Consultoria DBA (você vê 10 ambientes diferentes em 1 ano)
+   ▫️ Empresa grande com time de DBA estruturado (você aprende com Sêniors)
+
+
+=================================================================
+== 🎯 Como se preparar para a entrevista
+=================================================================
+▶️ Entrevista de DBA Junior tem 3 fases típicas:
+
+1️⃣ TRIAGEM RH/RECRUTADOR (15-30 min)
+   ▫️ Falar sobre você (treine 2 min de pitch)
+   ▫️ Por que DBA Oracle?
+   ▫️ Pretensão salarial (pesquise antes — vídeo do salário)
+   ▫️ Disponibilidade
+
+2️⃣ TÉCNICA (30-60 min)
+   ▫️ Conceituais: o que é tablespace, diferença instance/database, ACID
+   ▫️ Práticas: como você criaria um usuário, o que faria se um datafile encheu
+   ▫️ Troubleshooting: "como você diagnosticaria query lenta?"
+   ▫️ SQL: query com join, group by, subquery
+   ▫️ Linux: comandos básicos, ler log com tail/grep
+
+3️⃣ FIT CULTURAL (15-30 min)
+   ▫️ Como você reage a pressão? (incidentes em produção)
+   ▫️ Trabalho em time, comunicação
+   ▫️ Disposição pra plantão
+
+💡 Dica de ouro: NA HORA DA ENTREVISTA, EXPLIQUE O RACIOCÍNIO
+   ▫️ Não diga só "use FLASHBACK" — explique POR QUE
+   ▫️ Não saber a resposta é OK; não saber raciocinar não é
+
+
+=================================================================
+== 🎯 Perguntas mais comuns em entrevista de DBA Junior
+=================================================================
+🎤 "Qual a diferença entre instance e database?"
+🎤 "Como você faria um backup completo de um banco Oracle?"
+🎤 "O que é um tablespace? Quais tipos existem?"
+🎤 "Como diagnosticar uma query lenta?"
+🎤 "O que acontece em um COMMIT? E em um ROLLBACK?"
+🎤 "Diferença entre PDB e CDB?"
+🎤 "Como você verifica espaço disponível em uma tablespace?"
+🎤 "O que é o alert.log e quando você o consulta?"
+🎤 "Conta uma situação onde você resolveu um problema técnico"
+🎤 "O que é Oracle Multitenant?"
+
+💡 Estude AS RESPOSTAS, mas mais que isso, ESTUDE O RACIOCÍNIO
+💡 Pratique falando essas respostas em voz alta — ajuda muito
+
+
+=================================================================
+== 🎯 Erros que ELIMINAM o candidato
+=================================================================
+⚠️ Currículo com "DBA Oracle Sênior" tendo 0 experiência — pega muito mal
+⚠️ Mentir sobre experiência em entrevista — tem perguntas de pegadinha
+⚠️ Não saber explicar o próprio portfólio do GitHub
+⚠️ Chegar atrasado na entrevista (mesmo online)
+⚠️ Falar mal de empresa anterior, mesmo se tinha problemas reais
+⚠️ Não fazer perguntas no final — passa imagem de desinteresse
+⚠️ Pretensão salarial 3x acima da faixa real do mercado
+⚠️ Currículo de 5 páginas — Junior cabe em 1
+
+
+=================================================================
+== 🎯 Negociar a primeira proposta
+=================================================================
+▶️ Sim, dá pra negociar, mesmo sendo Junior
+▶️ Mas tem regra: você só negocia se já passou em outra entrevista (alavanca)
+
+💡 Quando vier a primeira oferta:
+   1. Agradeça e peça 24-48h pra avaliar (NUNCA aceite na hora)
+   2. Pesquise a faixa real no Glassdoor pra essa empresa específica
+   3. Se a oferta estiver na faixa baixa: peça 10-15% a mais com argumento
+   4. Se não tiver flexibilidade salarial, negocie BENEFÍCIOS (vale, plano, home office, plano de carreira)
+
+⚠️ NÃO negocie:
+   ▫️ Se a oferta já está acima da média
+   ▫️ Se você não tem outra opção em jogo
+   ▫️ Empresa pequena/startup com salário tabelado
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Defina um cronograma: dedique 1-2h/dia, 5-6 dias/semana
+💡 GitHub é seu currículo técnico — atualize toda semana
+💡 LinkedIn é seu currículo profissional — atualize todo mês
+💡 Faça pelo menos 5 entrevistas em paralelo (mesmo se a primeira parecer boa)
+💡 Documente tudo que aprende — você vai precisar lembrar na entrevista
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ Primeira vaga de DBA Oracle é difícil, mas tem ROTEIRO
+▶️ A ordem certa: Fundamentos → Arquitetura → Dia-a-dia → Lab + Portfólio → Entrevistas
+▶️ Empresas contratam quem PROVA que sabe — não quem só lista cursos
+▶️ Lab pessoal + GitHub + LinkedIn + Entrevistas múltiplas = receita do primeiro contrato
+▶️ Não pule etapas — Junior que tenta passar por Pleno geralmente é descoberto
+
+
+=================================================================
+== 🚀 Challenge
+=================================================================
+▶️ Monte HOJE seu lab pessoal (VirtualBox + Oracle Linux + Oracle 19c)
+▶️ Crie um repositório público no GitHub chamado "meus-estudos-dba-oracle"
+▶️ Suba seu primeiro script: "como criar um usuário e dar quota"
+▶️ Atualize seu LinkedIn essa semana com TODAS as skills que você já tem
+▶️ Aplique em 5 vagas de DBA Junior nessa semana — mesmo se ainda achar que "não está pronto"
+▶️ Compartilhe seu repositório nos comentários do vídeo, eu vou dar uma olhada!
