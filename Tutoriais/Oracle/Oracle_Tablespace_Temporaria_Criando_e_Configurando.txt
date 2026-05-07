@@ -35,55 +35,99 @@
 
 
 =================================================================
-== 🎯 Criando Tablespace Temporária Smallfile
+== 🎯 Criando Tablespace Temporária Smallfile (CDB1 / HUMAN_RESOURCES)
 =================================================================
 ▶️ Formato tradicional: suporta múltiplos tempfiles, com limite de até 4 milhões de blocos por arquivo
 ▶️ Ideal quando se deseja distribuir os arquivos em diferentes discos ou volumes
 
+-- Definindo o ambiente para o CDB1:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col pdb_name format a25
+
+-- Acessando a PDB HUMAN_RESOURCES:
+SQL> alter session set container = HUMAN_RESOURCES;
+
 -- Criação simples com caminho explícito:
-SQL> CREATE TEMPORARY TABLESPACE temp_app
-     TEMPFILE '/u01/app/oracle/oradata/cdb1/temp_app01.dbf'
+SQL> CREATE TEMPORARY TABLESPACE temp_hr
+     TEMPFILE '/u01/app/oracle/oradata/CDB1/human_resources/temp_hr01.dbf'
      SIZE 500M
      AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
 
 -- Verificando a criação:
-SQL> SELECT tablespace_name, status, contents
-     FROM dba_tablespaces
-     WHERE tablespace_name = 'TEMP_APP';
+SQL> col tablespace_name format a25
+SQL> col contents        format a10
+SQL> col status          format a10
+
+SQL> SELECT tablespace_name,
+            status,
+            contents
+     FROM   dba_tablespaces
+     WHERE  tablespace_name = 'TEMP_HR';
 
 
 =================================================================
-== 🎯 Criando Tablespace Temporária Bigfile
+== 🎯 Criando Tablespace Temporária Bigfile (CDB2 / SALES_HISTORY)
 =================================================================
 ▶️ Permite apenas UM tempfile, mas de tamanho muito maior (até 128TB dependendo do block size)
 ▶️ Simplifica o gerenciamento e é indicada para ambientes com grandes volumes de dados temporários
 ▶️ Muito utilizada em ambientes de Data Warehouse com operações de sort intensivas
 
-SQL> CREATE BIGFILE TEMPORARY TABLESPACE temp_big
-     TEMPFILE '/u01/app/oracle/oradata/cdb1/temp_big01.dbf'
+-- Alternando para o CDB2:
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Acessando a PDB SALES_HISTORY:
+SQL> alter session set container = SALES_HISTORY;
+
+SQL> CREATE BIGFILE TEMPORARY TABLESPACE temp_sh_big
+     TEMPFILE '/u01/app/oracle/oradata/CDB2/sales_history/temp_sh_big01.dbf'
      SIZE 10G
      AUTOEXTEND ON NEXT 1G MAXSIZE UNLIMITED;
 
 💡 Para verificar se é bigfile ou smallfile:
-SQL> SELECT tablespace_name, bigfile
-     FROM dba_tablespaces
-     WHERE contents = 'TEMPORARY';
+SQL> col tablespace_name format a25
+SQL> col bigfile         format a10
+
+SQL> SELECT tablespace_name,
+            bigfile
+     FROM   dba_tablespaces
+     WHERE  contents = 'TEMPORARY';
 
 
 =================================================================
-== 🎯 Criando com OMF (Oracle Managed Files)
+== 🎯 Criando com OMF (CDB1 / CUSTOMER_ORDERS)
 =================================================================
 ▶️ Com OMF, o Oracle gerencia automaticamente o nome e o local dos arquivos
 ▶️ Basta ter o parâmetro DB_CREATE_FILE_DEST configurado
 
+-- Voltando para o CDB1:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Acessando a PDB CUSTOMER_ORDERS:
+SQL> alter session set container = CUSTOMER_ORDERS;
+
 -- Verificando o parâmetro OMF:
+SQL> col name  format a30
+SQL> col value format a60
+
 SQL> SHOW PARAMETER db_create_file_dest;
 
 -- Configurando o parâmetro (se necessário):
-SQL> ALTER SYSTEM SET db_create_file_dest='/u01/app/oracle/oradata/cdb1/' SCOPE=BOTH;
+SQL> ALTER SYSTEM SET db_create_file_dest='/u01/app/oracle/oradata/CDB1/customer_orders/' SCOPE=BOTH;
 
 -- Criando a tablespace temporária com OMF (sem informar o nome do arquivo):
-SQL> CREATE TEMPORARY TABLESPACE temp_omf
+SQL> CREATE TEMPORARY TABLESPACE temp_co_omf
      TEMPFILE SIZE 500M
      AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
 
@@ -95,9 +139,22 @@ SQL> CREATE TEMPORARY TABLESPACE temp_omf
 =================================================================
 ▶️ Em ambientes com ASM, o tempfile é criado diretamente no diskgroup
 ▶️ O ASM gerencia o balanceamento e a redundância dos arquivos
+⚠️ O laboratório do canal usa filesystem — os comandos abaixo são para referência em ambientes ASM
 
 -- Verificando os diskgroups disponíveis:
-SQL> SELECT name, state, type FROM v$asm_diskgroup;
+SQL> set lines 200
+SQL> set pages 200
+SQL> col name        format a15
+SQL> col state       format a12
+SQL> col total_gb    format 999,990.99
+SQL> col free_gb     format 999,990.99
+
+SQL> SELECT name,
+            state,
+            type,
+            total_mb/1024 AS total_gb,
+            free_mb/1024  AS free_gb
+     FROM   v$asm_diskgroup;
 
 -- Criando a tablespace temporária no ASM:
 SQL> CREATE TEMPORARY TABLESPACE temp_asm
@@ -111,37 +168,55 @@ SQL> CREATE TEMPORARY TABLESPACE temp_asm_fra
      SIZE 500M
      AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
 
-💡 Para ver os tempfiles criados no ASM:
-SQL> SELECT file_name FROM dba_temp_files
-     WHERE tablespace_name IN ('TEMP_ASM', 'TEMP_ASM_FRA');
-
 
 =================================================================
-== 🎯 Adicionando mais de um Tempfile
+== 🎯 Adicionando mais de um Tempfile (CDB2 / ORDER_ENTRY)
 =================================================================
 ▶️ Em tablespaces smallfile, é possível adicionar múltiplos tempfiles para aumentar a capacidade ou distribuir I/O
 ▶️ Muito útil quando se esgota o espaço disponível em um único volume
 
--- Adicionando um segundo tempfile à tablespace:
-SQL> ALTER TABLESPACE temp_app
-     ADD TEMPFILE '/u02/app/oracle/oradata/cdb1/temp_app02.dbf'
+-- Alternando para o CDB2:
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+
+SQL> alter session set container = ORDER_ENTRY;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Criando primeiro a tablespace base:
+SQL> CREATE TEMPORARY TABLESPACE temp_oe
+     TEMPFILE '/u01/app/oracle/oradata/CDB2/order_entry/temp_oe01.dbf'
+     SIZE 500M
+     AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
+
+-- Adicionando um segundo tempfile:
+SQL> ALTER TABLESPACE temp_oe
+     ADD TEMPFILE '/u02/app/oracle/oradata/CDB2/order_entry/temp_oe02.dbf'
      SIZE 500M
      AUTOEXTEND ON NEXT 100M MAXSIZE 2G;
 
 -- Adicionando um terceiro tempfile em outro volume:
-SQL> ALTER TABLESPACE temp_app
-     ADD TEMPFILE '/u03/app/oracle/oradata/cdb1/temp_app03.dbf'
+SQL> ALTER TABLESPACE temp_oe
+     ADD TEMPFILE '/u03/app/oracle/oradata/CDB2/order_entry/temp_oe03.dbf'
      SIZE 1G
      AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
 
 -- Listando todos os tempfiles da tablespace:
-SQL> SELECT file_name, bytes/1024/1024 AS size_mb,
-            autoextensible, maxbytes/1024/1024 AS maxsize_mb
-     FROM dba_temp_files
-     WHERE tablespace_name = 'TEMP_APP'
-     ORDER BY file_id;
+SQL> col file_name      format a70
+SQL> col size_gb        format 999,990.99
+SQL> col maxsize_gb     format 999,990.99
+SQL> col autoextensible format a15
 
-⚠️ Tablespaces Bigfile aceitam apenas um tempfile — use ALTER DATABASE DATAFILE para redimensionar
+SQL> SELECT file_name,
+            bytes/1024/1024/1024    AS size_gb,
+            autoextensible,
+            maxbytes/1024/1024/1024 AS maxsize_gb
+     FROM   dba_temp_files
+     WHERE  tablespace_name = 'TEMP_OE'
+     ORDER  BY file_id;
+
+⚠️ Tablespaces Bigfile aceitam apenas um tempfile — use ALTER DATABASE TEMPFILE para redimensionar
 
 
 =================================================================
@@ -150,67 +225,118 @@ SQL> SELECT file_name, bytes/1024/1024 AS size_mb,
 ▶️ Por padrão, usuários herdam a tablespace temporária padrão do banco
 ▶️ É uma boa prática definir explicitamente a tablespace temporária por usuário ou perfil de aplicação
 
--- Verificando a tablespace temporária padrão do banco:
-SQL> SELECT property_name, property_value
-     FROM database_properties
-     WHERE property_name = 'DEFAULT_TEMP_TABLESPACE';
+-- Voltando para o CDB1 / HUMAN_RESOURCES:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
 
--- Definindo a tablespace temporária no momento da criação do usuário:
-SQL> CREATE USER app_user
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Verificando a tablespace temporária padrão da PDB:
+SQL> col property_name  format a30
+SQL> col property_value format a30
+
+SQL> SELECT property_name,
+            property_value
+     FROM   database_properties
+     WHERE  property_name = 'DEFAULT_TEMP_TABLESPACE';
+
+-- Criando um usuário já apontando para a tablespace temp_hr:
+SQL> CREATE USER hr_app
      IDENTIFIED BY "SenhaForte#2026"
      DEFAULT TABLESPACE users
-     TEMPORARY TABLESPACE temp_app
+     TEMPORARY TABLESPACE temp_hr
      QUOTA UNLIMITED ON users;
 
 -- Alterando a tablespace temporária de um usuário existente:
-SQL> ALTER USER app_user TEMPORARY TABLESPACE temp_app;
+SQL> ALTER USER hr_app TEMPORARY TABLESPACE temp_hr;
 
 -- Verificando a configuração do usuário:
-SQL> SELECT username, temporary_tablespace
-     FROM dba_users
-     WHERE username = 'APP_USER';
+SQL> col username             format a20
+SQL> col temporary_tablespace format a20
 
--- Alterando a tablespace temporária padrão do banco (afeta todos os usuários sem definição explícita):
-SQL> ALTER DATABASE DEFAULT TEMPORARY TABLESPACE temp_app;
+SQL> SELECT username,
+            temporary_tablespace
+     FROM   dba_users
+     WHERE  username = 'HR_APP';
 
-💡 Para reverter à TEMP original:
-SQL> ALTER DATABASE DEFAULT TEMPORARY TABLESPACE temp;
+-- Alterando a tablespace temporária padrão da PDB:
+SQL> ALTER DATABASE DEFAULT TEMPORARY TABLESPACE temp_hr;
+
+💡 Repita o exercício no CDB2 / SALES_HISTORY para o usuário sh_app apontando para temp_sh_big:
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+SQL> alter session set container = SALES_HISTORY;
+SQL> CREATE USER sh_app IDENTIFIED BY "SenhaForte#2026"
+     DEFAULT TABLESPACE users
+     TEMPORARY TABLESPACE temp_sh_big;
 
 
 =================================================================
 == 🎯 Consultando informações no dicionário de dados
 =================================================================
--- Listando todas as tablespaces temporárias do banco:
-SQL> SELECT tablespace_name, status, bigfile, extent_management
-     FROM dba_tablespaces
-     WHERE contents = 'TEMPORARY'
-     ORDER BY tablespace_name;
+-- Conectado em qualquer container (CDB$ROOT por exemplo):
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
 
--- Detalhes dos tempfiles:
+SQL> set lines 200
+SQL> set pages 200
+
+-- Listando todas as tablespaces temporárias da PDB atual:
+SQL> col tablespace_name   format a25
+SQL> col status            format a10
+SQL> col bigfile           format a10
+SQL> col extent_management format a15
+
+SQL> SELECT tablespace_name,
+            status,
+            bigfile,
+            extent_management
+     FROM   dba_tablespaces
+     WHERE  contents = 'TEMPORARY'
+     ORDER  BY tablespace_name;
+
+-- Detalhes dos tempfiles com tamanho em GB:
+SQL> col tablespace_name format a25
+SQL> col file_name       format a70
+SQL> col size_gb         format 999,990.99
+SQL> col maxsize_gb      format 999,990.99
+SQL> col autoextensible  format a15
+
 SQL> SELECT f.tablespace_name,
             f.file_name,
-            f.bytes/1024/1024        AS size_mb,
+            f.bytes/1024/1024/1024    AS size_gb,
             f.autoextensible,
-            f.maxbytes/1024/1024     AS maxsize_mb
-     FROM dba_temp_files f
-     ORDER BY f.tablespace_name, f.file_id;
+            f.maxbytes/1024/1024/1024 AS maxsize_gb
+     FROM   dba_temp_files f
+     ORDER  BY f.tablespace_name, f.file_id;
 
--- Uso atual das tablespaces temporárias (sessões ativas):
+-- Uso atual das tablespaces temporárias:
+SQL> col tablespace_name format a25
+SQL> col allocated_gb    format 999,990.99
+SQL> col free_gb         format 999,990.99
+
 SQL> SELECT tablespace_name,
-            allocated_space/1024/1024  AS allocated_mb,
-            free_space/1024/1024       AS free_mb
-     FROM dba_temp_free_space
-     ORDER BY tablespace_name;
+            allocated_space/1024/1024/1024 AS allocated_gb,
+            free_space/1024/1024/1024      AS free_gb
+     FROM   dba_temp_free_space
+     ORDER  BY tablespace_name;
 
 -- Verificando qual usuário está usando espaço temporário no momento:
+SQL> col username        format a20
+SQL> col tablespace      format a25
+SQL> col used_gb         format 999,990.99
+
 SQL> SELECT s.username,
             s.sid,
             s.serial#,
             t.tablespace,
-            t.blocks * 8192/1024/1024 AS used_mb
-     FROM v$sort_usage t
-     JOIN v$session s ON s.saddr = t.session_addr
-     ORDER BY used_mb DESC;
+            (t.blocks * 8192)/1024/1024/1024 AS used_gb
+     FROM   v$sort_usage t
+     JOIN   v$session    s ON s.saddr = t.session_addr
+     ORDER  BY used_gb DESC;
 
 
 =================================================================
