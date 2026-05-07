@@ -1,0 +1,186 @@
+========================================================================================
+== Salário de DBA Oracle em 2026 - Junior, Pleno e Sênior
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 Faixa salarial Junior, Pleno e Sênior no Brasil
+📍 Diferença real entre os níveis (não é só tempo de casa)
+📍 CLT vs PJ — quanto cada um realmente paga
+📍 Mercado remoto LATAM e EUA
+📍 O que define o salário (skills que pagam mais)
+📍 Roteiro prático: como subir de nível
+📍 Erros que travam o crescimento salarial
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ DBA Oracle é uma das carreiras mais bem pagas em TI no Brasil
+▶️ A diferença entre Junior e Sênior pode passar de 5x no salário
+▶️ O salário não cresce só com tempo de casa — depende de skills específicas
+▶️ O mercado remoto exterior multiplicou as faixas: hoje DBAs brasileiros ganham em USD trabalhando para empresas dos EUA, Europa e Austrália
+⚠️ Os valores neste vídeo são faixas de mercado coletadas em pesquisas públicas (Glassdoor, Catho, Vagas.com, LinkedIn) — números individuais variam por região, empresa e segmento
+
+
+=================================================================
+== 🎯 Faixa Salarial no Brasil (CLT)
+=================================================================
+▶️ Os valores abaixo são a faixa de mercado CLT em capitais (SP, RJ, BH, Brasília) em 2026:
+
+💼 DBA Oracle Junior
+   ▫️ Faixa: R$ 4.000 — R$ 7.500
+   ▫️ Média: ~R$ 5.500
+   ▫️ Perfil: 0-2 anos, executa rotinas, monitora, abre chamados, escala incidentes
+
+💼 DBA Oracle Pleno
+   ▫️ Faixa: R$ 7.500 — R$ 13.000
+   ▫️ Média: ~R$ 10.000
+   ▫️ Perfil: 2-5 anos, autônomo em incidentes, propõe melhorias, participa de projetos
+
+💼 DBA Oracle Sênior
+   ▫️ Faixa: R$ 13.000 — R$ 22.000
+   ▫️ Média: ~R$ 16.500
+   ▫️ Perfil: 5+ anos, lidera projetos críticos, define arquitetura, mentora juniores
+
+💼 DBA Oracle Especialista / Tech Lead
+   ▫️ Faixa: R$ 20.000 — R$ 40.000+
+   ▫️ Perfil: Especialização forte (Exadata, RAC, Performance, Multitenant em escala)
+
+⚠️ Cidades menores tendem a ficar 20-30% abaixo dessas faixas
+
+
+=================================================================
+== 🎯 CLT vs PJ — quanto realmente paga?
+=================================================================
+▶️ Em geral, PJ paga entre 30% e 50% a mais que CLT em valor bruto
+▶️ Mas você precisa descontar benefícios + impostos para comparar
+
+💡 Exemplo prático para um DBA Pleno:
+   ▫️ CLT: R$ 10.000/mês + 13º + férias + FGTS + plano de saúde + VR + VT
+   ▫️ PJ: R$ 14.000-15.000/mês (você arca com tudo)
+
+📊 Fazendo as contas, o "PJ líquido equivalente" fica próximo do CLT bruto + 30%
+   ▫️ Vantagem PJ: flexibilidade, possibilidade de múltiplas fontes
+   ▫️ Vantagem CLT: estabilidade, benefícios, seguro-desemprego, FGTS
+
+⚠️ Cuidado com PJ "disfarçada" — onde você é exclusivo da empresa, com horário fixo, mas sem direitos. É ilegal e o INSS pode autuar
+
+
+=================================================================
+== 🎯 Mercado Remoto Internacional
+=================================================================
+▶️ A grande mudança da última década: DBAs brasileiros podem ganhar em USD
+▶️ Plataformas que abriram esse mercado: Crossover, Toptal, Turing, Andela, Deel, Remote.com
+
+💰 Faixas para DBA Oracle remoto (USD/mês, brutos):
+   ▫️ LATAM (empresas SaaS, fintechs): USD 2.500 — USD 6.000
+   ▫️ EUA Junior/Pleno: USD 4.000 — USD 8.000
+   ▫️ EUA Sênior: USD 8.000 — USD 14.000+
+   ▫️ Especialista (RAC, Exadata, Performance): USD 12.000 — USD 20.000+
+
+💡 No câmbio atual (R$ 5,50/USD), até um Junior remoto exterior pode ganhar R$ 13.000-22.000/mês
+
+⚠️ Pré-requisitos para entrar nesse mercado:
+   ▫️ Inglês conversacional (não precisa ser nativo, mas precisa se comunicar bem)
+   ▫️ GitHub público ou portfólio visível
+   ▫️ LinkedIn em inglês
+   ▫️ Disponibilidade para reuniões em horário americano (geralmente das 10h às 18h BR)
+
+
+=================================================================
+== 🎯 O que REALMENTE define o salário
+=================================================================
+▶️ Tempo de casa é só um dos fatores — e nem é o principal
+▶️ Os 5 fatores que mais movem o salário (em ordem de impacto):
+
+1️⃣ ESPECIALIZAÇÃO
+   ▫️ Quem só faz "rotina" estagna no Junior/Pleno
+   ▫️ Especialistas em Performance, RAC, Exadata, Cloud (OCI/AWS/Azure) ganham 50-100% a mais
+   ▫️ Multitenant em escala (centenas de PDBs) é nicho premium
+
+2️⃣ ENGLISH FLUENCY
+   ▫️ Trava o acesso ao mercado remoto exterior
+   ▫️ Vira pré-requisito para vagas de empresas grandes (mesmo no Brasil)
+
+3️⃣ VISIBILIDADE PROFISSIONAL
+   ▫️ LinkedIn ativo + GitHub + blog técnico aumentam o "preço de mercado"
+   ▫️ Recrutadores procuram quem é encontrável
+
+4️⃣ COMPLEXIDADE DOS AMBIENTES
+   ▫️ DBA que cuida de 5 bancos pequenos vale menos que quem cuida de 1 ambiente crítico de banco
+   ▫️ Bancos com Data Guard, RAC, Golden Gate pagam mais
+
+5️⃣ SOFT SKILLS
+   ▫️ Saber se comunicar com áreas de negócio
+   ▫️ Conseguir explicar incidentes de forma clara
+   ▫️ Liderar troubleshooting sem perder a calma
+
+
+=================================================================
+== 🎯 Como subir de nível (roteiro prático)
+=================================================================
+🎯 Junior → Pleno (típico em 2-3 anos)
+   ▫️ Dominar Backup/Recovery (RMAN ponta a ponta)
+   ▫️ Fazer plano de capacidade
+   ▫️ Resolver incidentes sem precisar abrir SR na Oracle
+   ▫️ Entender Multitenant, ASM, Data Guard
+   ▫️ Comunicar bem com áreas de negócio
+
+🎯 Pleno → Sênior (típico em 3-5 anos)
+   ▫️ Especializar em performance: AWR, ADDM, SQL Tuning
+   ▫️ Liderar projetos (migração, upgrade, criação de ambiente)
+   ▫️ Ser referência técnica em pelo menos 1 sub-tema
+   ▫️ Mentora juniores
+   ▫️ Inglês fluente
+
+🎯 Sênior → Especialista (típico em 4-7 anos a partir do Sr)
+   ▫️ Aprofundar em UM nicho (Exadata, RAC, Cloud, Performance, Security)
+   ▫️ Construir presença pública (palestras, blog, GitHub, certificações OCM/OCP avançadas)
+   ▫️ Atuar em ambientes complexos
+
+
+=================================================================
+== 🎯 Erros que TRAVAM o crescimento salarial
+=================================================================
+⚠️ Ficar mais de 3 anos sem trocar de empresa — promoções internas tendem a ser tímidas
+⚠️ Não estudar inglês — deixa de lado 60% das vagas premium
+⚠️ Resistir a Cloud (OCI, AWS, Azure) — mercado migrou e quem fica em on-premise puro estagna
+⚠️ Não ter LinkedIn nem GitHub — você é invisível para recrutadores tech
+⚠️ Aceitar primeira contraproposta sem negociar — empresas SEMPRE deixam margem
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Pesquise sua faixa real no Glassdoor, Vagas.com e grupos de DBA antes de negociar
+💡 Atualize o LinkedIn a cada 6 meses, mesmo se estiver feliz
+💡 Faça pelo menos 2-3 entrevistas por ano para calibrar seu valor de mercado
+💡 Documente seu trabalho (case study interno) — é munição para promoção e vagas externas
+💡 Inglês: estude todo dia, mesmo que 30 minutos
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ DBA Oracle Junior ganha entre R$ 4.000 e R$ 7.500 no Brasil; Pleno chega a R$ 13.000; Sênior pode passar de R$ 22.000
+▶️ O remoto exterior pode multiplicar isso por 2 ou 3, se inglês e portfólio estiverem em ordem
+▶️ Salário cresce com especialização e visibilidade — não só com tempo de casa
+▶️ Os fatores que mais pagam: cloud, performance, English, multitenant em escala
+
+
+=================================================================
+== 🚀 Challenge
+=================================================================
+▶️ Atualize seu LinkedIn essa semana com TODAS as suas skills técnicas
+▶️ Pesquise 5 vagas de DBA Oracle no LinkedIn e anote a faixa salarial pedida
+▶️ Compare com o que você ganha hoje — se a diferença for grande, está na hora de mover
+▶️ Liste 3 skills que você ainda não tem mas que aparecem em vagas — esse é seu plano de estudos
