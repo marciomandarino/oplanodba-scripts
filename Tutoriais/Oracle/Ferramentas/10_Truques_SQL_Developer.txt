@@ -1,0 +1,280 @@
+========================================================================================
+== 10 truques no SQL Developer que vão te fazer parecer DBA sênior
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 Truque 1: Atalhos essenciais de teclado
+📍 Truque 2: Format SQL automático
+📍 Truque 3: Code Snippets (suas queries favoritas a 1 clique)
+📍 Truque 4: Connection Folders + Cor por ambiente
+📍 Truque 5: Reports prontos da aba DBA
+📍 Truque 6: Worksheet Split + History
+📍 Truque 7: Autotrace e Explain Plan visual
+📍 Truque 8: Find Database Object (Ctrl+-)
+📍 Truque 9: glogin.sql — seu prompt customizado
+📍 Truque 10: Database Export Wizard
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ SQL Developer é a ferramenta universal do DBA Oracle — gratuita, oficial, multiplataforma
+▶️ A maioria dos DBAs usa só 10% do que ela oferece
+▶️ Esses 10 truques vão te economizar HORAS por semana
+▶️ Tudo testado nos meus CDB1 e CDB2 com SQL Developer 23.1+
+
+
+=================================================================
+== 🎯 Truque 1 — Atalhos Essenciais de Teclado
+=================================================================
+▶️ Tempo é tudo no troubleshooting — atalhos transformam cliques em microssegundos
+
+⌨️ Atalhos que você vai usar todo dia:
+   ▫️ Ctrl + Enter        → Executa a linha do cursor
+   ▫️ F5                  → Executa o script inteiro como SQL*Plus
+   ▫️ F10                 → Executa apenas a SELECT atual
+   ▫️ Ctrl + F7           → Format SQL (alinhamento automático)
+   ▫️ Ctrl + /            → Comenta/descomenta linha
+   ▫️ Ctrl + Shift + F4   → Plano de execução (Explain Plan)
+   ▫️ Ctrl + Shift + D    → Autotrace
+   ▫️ Ctrl + Espaço       → Autocomplete (PL/SQL e SQL)
+   ▫️ Ctrl + -            → Find Database Object
+   ▫️ Alt + setas         → Mover linha pra cima/baixo
+
+
+=================================================================
+== 🎯 Truque 2 — Format SQL Automático
+=================================================================
+▶️ SQL alinhado é mais legível e fácil de revisar
+▶️ Personalize o estilo: Tools → Preferences → Code Editor → Format
+
+💡 Como usar:
+   1. Selecione a query desorganizada
+   2. Pressione Ctrl + F7
+   3. SQL Developer formata: keywords em maiúscula, alinha colunas, identa joins
+
+⚙️ Configurações que valem ajustar:
+   ▫️ Keywords case: UPPER (padrão do canal)
+   ▫️ Identifiers case: lower
+   ▫️ Line breaks on AND/OR: true
+   ▫️ Right margin: 80 ou 120 caracteres
+
+
+=================================================================
+== 🎯 Truque 3 — Code Snippets (suas queries favoritas a 1 clique)
+=================================================================
+▶️ Queries que você usa toda hora não precisam ser digitadas de novo
+▶️ Snippets ficam salvos no perfil e podem ser arrastados para qualquer worksheet
+
+💡 Como criar:
+   1. Menu: View → Snippets
+   2. Aba inferior abre com categorias (Aggregate Functions, Date Functions, etc.)
+   3. Clique direito na categoria → New Snippet
+   4. Nome + Tooltip + Code
+
+📌 Snippets que valem ouro:
+   ▫️ "Tablespace usage" (consulta de uso de tablespace em GB)
+   ▫️ "Top SQL last hour" (top 10 SQLs do último hora)
+   ▫️ "Active sessions" (sessões ativas com wait events)
+   ▫️ "DB size" (tamanho total do banco)
+
+
+=================================================================
+== 🎯 Truque 4 — Connection Folders + Cor por Ambiente
+=================================================================
+▶️ Misturar produção com homologação é receita pra desastre
+▶️ Cor diferente por ambiente é alarme visual instantâneo
+
+💡 Como organizar:
+   1. Painel Connections → clique direito → Add Folder
+   2. Crie pastas: PROD, HOMOLOG, DEV, LAB
+   3. Mova as conexões para as pastas
+
+🎨 Definir cor da conexão:
+   1. Clique direito na conexão → Properties
+   2. Aba "Connection Color"
+   3. Recomendado:
+      ▫️ Vermelho   → Produção
+      ▫️ Amarelo    → Homologação
+      ▫️ Verde      → Dev/Lab
+      ▫️ Azul claro → Backup/Standby
+
+
+=================================================================
+== 🎯 Truque 5 — Reports Prontos da aba DBA (CDB1)
+=================================================================
+▶️ A aba DBA tem dezenas de relatórios já prontos — sem precisar escrever query
+▶️ Funciona com qualquer usuário que tenha SELECT_CATALOG_ROLE
+
+-- Setup rápido no lab:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+SQL> CREATE USER monitor IDENTIFIED BY "Senha#2026";
+SQL> GRANT CREATE SESSION, SELECT_CATALOG_ROLE TO monitor;
+
+💡 No SQL Developer:
+   1. Menu: View → DBA
+   2. Clique em "+" e adicione a conexão monitor@HUMAN_RESOURCES
+   3. Navegue: Performance → Top Activity, Sessions, Reports → Storage, etc.
+
+📊 Reports mais úteis:
+   ▫️ Sessions → quem está conectado AGORA, com SQL atual e wait event
+   ▫️ Top Activity → gráfico estilo OEM, sem precisar do EM
+   ▫️ Storage → uso de tablespaces em tempo real
+   ▫️ Performance → AWR/ADDM direto da interface
+
+
+=================================================================
+== 🎯 Truque 6 — Worksheet Split + History
+=================================================================
+▶️ Trabalhar com 2 queries lado a lado economiza muito alt-tab
+▶️ History recupera SQLs antigas que você esqueceu de salvar
+
+💡 Split do Worksheet:
+   1. Clique direito na aba do worksheet → Split Document
+   2. Edite a query A no lado esquerdo, query B no direito
+   3. Resultado fica abaixo de cada uma
+
+💡 SQL History:
+   1. Pressione F8 OU View → SQL History
+   2. Mostra TODAS as queries que você executou (ordenadas por data)
+   3. Filtro por texto, conexão e período
+   4. Clique duplo pra trazer pro worksheet
+
+⚠️ History limpa entre reinicializações se você não configurar persistência:
+   Tools → Preferences → Database → Worksheet → SQL History → Save
+
+
+=================================================================
+== 🎯 Truque 7 — Autotrace e Explain Plan Visual
+=================================================================
+▶️ Autotrace mostra estatísticas de execução real (não só estimativa)
+▶️ Mais útil que EXPLAIN PLAN porque mostra physical reads, sorts, etc.
+
+-- Setup necessário (uma vez por banco):
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+SQL> @?/sqlplus/admin/plustrce.sql
+SQL> GRANT plustrace TO hr_app;
+
+💡 Como usar no SQL Developer:
+   1. Conectado como hr_app
+   2. Cole a query no worksheet
+   3. Pressione F10 (Explain Plan) ou Ctrl + Shift + D (Autotrace)
+   4. Painel inferior mostra plano + estatísticas (se Autotrace)
+
+📊 O que olhar no plano visual:
+   ▫️ Cor vermelha → operação cara (full table scan, sort)
+   ▫️ Linha grossa → muitos rows
+   ▫️ "Cost" → estimativa do otimizador
+
+
+=================================================================
+== 🎯 Truque 8 — Find Database Object (Ctrl + -)
+=================================================================
+▶️ Procurar tabelas, views, packages em ambientes grandes pode ser tortura
+▶️ O atalho Ctrl + - abre a busca global em qualquer schema
+
+💡 Caso de uso real:
+   ▫️ Você lembra que tem uma tabela com "venda" no nome
+   ▫️ Pressiona Ctrl + -
+   ▫️ Digita "vend" → mostra TODAS as tabelas que match (em qualquer schema acessível)
+   ▫️ Filtros: tipo de objeto, schema, tablespace
+   ▫️ Clique duplo abre o objeto
+
+⚠️ Em ambientes muito grandes (10K+ objetos), use o filtro de schema antes
+
+
+=================================================================
+== 🎯 Truque 9 — glogin.sql Customizado (CDB2)
+=================================================================
+▶️ glogin.sql roda automaticamente toda vez que você abre uma conexão SQL*Plus
+▶️ SQL Developer respeita esse arquivo nos worksheets — você ganha um "prompt premium"
+
+-- Localização do arquivo:
+$ find / -name "glogin.sql" 2>/dev/null
+-- Geralmente: $ORACLE_HOME/sqlplus/admin/glogin.sql
+
+📝 Conteúdo recomendado para glogin.sql:
+
+set lines 200
+set pages 200
+set serveroutput on size unlimited
+set timing on
+set sqlprompt "_USER@_CONNECT_IDENTIFIER> "
+
+col tablespace_name format a25
+col file_name       format a70
+col username        format a20
+col size_gb         format 999,990.99
+col allocated_gb    format 999,990.99
+col free_gb         format 999,990.99
+
+💡 No SQL Developer:
+   1. Crie/edite um arquivo: ~/sqldeveloper-login.sql com o conteúdo acima
+   2. Tools → Preferences → Database → SQLPlus
+   3. Aponte o "Login Script Location" para ~/sqldeveloper-login.sql
+   4. Reabra a conexão e veja o prompt mudar
+
+
+=================================================================
+== 🎯 Truque 10 — Database Export Wizard
+=================================================================
+▶️ Datapump é poderoso, mas exigir comando + permissões pode ser obstáculo
+▶️ O Export Wizard do SQL Developer cobre 90% dos casos de export "ad-hoc"
+
+💡 Como usar:
+   1. Menu: Tools → Database Export
+   2. Selecione a conexão
+   3. Escolha:
+      ▫️ Schemas inteiros, ou
+      ▫️ Tabelas específicas, ou
+      ▫️ Apenas DDL (sem dados)
+   4. Saída: arquivo SQL único, ou múltiplos arquivos por objeto, ou ZIP
+
+📌 Casos onde brilha:
+   ▫️ Migrar uma tabela específica para outro ambiente
+   ▫️ Gerar DDL de um schema inteiro pra documentação
+   ▫️ Backup pontual de dados importantes antes de uma alteração
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Configure as cores das conexões no PRIMEIRO dia em qualquer ambiente
+💡 Salve seus 5 snippets favoritos — eles serão usados toda semana
+💡 glogin.sql customizado é o item que mais "diferencia DBA Sr de Pleno" no visual
+💡 Nunca rode F5 (script inteiro) sem ler — execução de DROP por engano não tem volta
+💡 Use o DBA panel ao invés de digitar SQL pra coisa básica
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ SQL Developer é muito mais que um worksheet — é uma plataforma completa
+▶️ Atalhos + snippets + glogin.sql cortam metade do tempo do dia-a-dia
+▶️ Cor por ambiente previne acidentes graves
+▶️ Aba DBA substitui boa parte do que você faria no OEM
+
+
+=================================================================
+== 🚀 Challenge
+=================================================================
+▶️ Configure cor vermelha em uma conexão de produção (mesmo no lab)
+▶️ Crie 3 snippets das suas queries favoritas
+▶️ Customize seu glogin.sql com o template do vídeo
+▶️ Adicione uma conexão na aba DBA e explore os reports
+▶️ Compartilhe nos comentários qual foi o truque que mais te impactou
