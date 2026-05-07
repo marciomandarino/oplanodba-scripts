@@ -1,0 +1,301 @@
+========================================================================================
+== Por que sua query Oracle está lenta? Os 5 motivos que ninguém te conta
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 Motivo 1: Estatísticas desatualizadas
+📍 Motivo 2: Falta de índice (ou índice errado)
+📍 Motivo 3: Plan instável (cardinalidade errada)
+📍 Motivo 4: I/O ruim e contenção em datafiles
+📍 Motivo 5: Wait events óbvios que ninguém olha
+📍 Como diagnosticar cada um (em < 2 min)
+📍 Boas práticas
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ Toda query lenta tem uma causa específica — não é "azar"
+▶️ Os 5 motivos abaixo cobrem ~80% dos casos que aparecem no dia-a-dia do DBA
+▶️ Cada um tem um sintoma característico e uma forma rápida de confirmar
+▶️ A ordem do vídeo é a mesma ordem do diagnóstico real: você verifica do mais barato pro mais caro
+⚠️ O preparo do ambiente: vamos usar dados de exemplo no CDB1/HUMAN_RESOURCES e CDB2/SALES_HISTORY
+
+
+=================================================================
+== 🎯 Motivo 1 — Estatísticas Desatualizadas (CDB1 / HUMAN_RESOURCES)
+=================================================================
+▶️ É o motivo número 1 — e o mais barato de resolver
+▶️ Sem estatísticas atualizadas, o otimizador "chuta" e quase sempre erra
+
+-- Definindo o ambiente:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Criando uma tabela de exemplo com 1 milhão de linhas:
+SQL> CREATE TABLE colaboradores AS
+     SELECT level                       AS id,
+            'Funcionario_' || level     AS nome,
+            CASE MOD(level, 5)
+              WHEN 0 THEN 'TI'
+              WHEN 1 THEN 'RH'
+              WHEN 2 THEN 'Vendas'
+              WHEN 3 THEN 'Financeiro'
+              ELSE        'Operações'
+            END                         AS departamento,
+            ROUND(DBMS_RANDOM.VALUE(3000, 25000), 2) AS salario
+     FROM   dual
+     CONNECT BY level <= 1000000;
+
+-- ⚠️ Sem rodar GATHER_TABLE_STATS, o Oracle não sabe que a tabela tem 1 milhão de linhas.
+-- Verificando estatísticas atuais:
+SQL> col table_name format a25
+SQL> col num_rows   format 999,999,999
+
+SQL> SELECT table_name,
+            num_rows,
+            last_analyzed
+     FROM   user_tables
+     WHERE  table_name = 'COLABORADORES';
+
+-- Plano sem estatísticas — vai estimar mal:
+SQL> EXPLAIN PLAN FOR
+     SELECT * FROM colaboradores WHERE departamento = 'TI';
+
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+-- Coletando estatísticas:
+SQL> EXEC DBMS_STATS.GATHER_TABLE_STATS('HR_APP', 'COLABORADORES');
+
+-- Refazendo o plano (vai estar muito melhor):
+SQL> EXPLAIN PLAN FOR
+     SELECT * FROM colaboradores WHERE departamento = 'TI';
+
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+💡 Em produção, o job DBMS_AUTO_TASKS roda toda noite. Mas se a tabela cresceu muito durante o dia, vale forçar manualmente
+
+
+=================================================================
+== 🎯 Motivo 2 — Falta de Índice (ou Índice Errado)
+=================================================================
+▶️ Sem índice na coluna do WHERE, é FULL TABLE SCAN garantido
+▶️ Mas índice DEMAIS também é problema (overhead de manutenção)
+
+-- Continuando na PDB HUMAN_RESOURCES, com a tabela colaboradores criada:
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Verificando o plano sem índice:
+SQL> EXPLAIN PLAN FOR
+     SELECT * FROM colaboradores WHERE id = 487523;
+
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+-- Resultado: TABLE ACCESS FULL
+
+-- Criando o índice:
+SQL> CREATE INDEX idx_colab_id ON colaboradores(id);
+
+-- Refazendo o plano:
+SQL> EXPLAIN PLAN FOR
+     SELECT * FROM colaboradores WHERE id = 487523;
+
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+-- Agora: INDEX RANGE SCAN + TABLE ACCESS BY INDEX ROWID
+
+⚠️ Cuidado com armadilhas comuns:
+   ▫️ Função em coluna indexada → quebra o uso do índice (UPPER(nome) = 'X' não usa índice em nome)
+   ▫️ Conversão implícita de tipo → mesmo problema
+   ▫️ Coluna com baixíssima cardinalidade (status = 'ATIVO' onde 95% dos registros estão ativos) → índice não ajuda
+
+💡 Use índice BITMAP em colunas de baixa cardinalidade em DW (mas NUNCA em OLTP)
+
+
+=================================================================
+== 🎯 Motivo 3 — Plan Instável (Cardinalidade Errada)
+=================================================================
+▶️ Sintoma: "essa query roda em 2 segundos de manhã e em 30 minutos à tarde"
+▶️ Causa: o otimizador escolhe planos diferentes em momentos diferentes — geralmente por mudança em estatísticas, bind peeking, ou pressão no shared pool
+
+-- Alternando para CDB2 / SALES_HISTORY (cenário de DW com muito dado):
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+
+SQL> alter session set container = SALES_HISTORY;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Verificando histórico de planos para um SQL específico:
+SQL> col sql_id        format a14
+SQL> col plan_hash     format 999,999,999,999
+SQL> col executions    format 999,999
+SQL> col avg_time_sec  format 999,990.99
+
+SQL> SELECT sql_id,
+            plan_hash_value             AS plan_hash,
+            executions,
+            elapsed_time/1000000/NULLIF(executions,0) AS avg_time_sec
+     FROM   v$sql
+     WHERE  sql_text LIKE '%COLABORADORES%'
+     ORDER  BY plan_hash;
+
+-- Se aparecer mais de 1 plan_hash para o mesmo sql_id, o plano está mudando.
+
+💡 Solução estrutural: SQL Plan Baselines fixam o plano vencedor
+SQL> DECLARE
+       v_plans PLS_INTEGER;
+     BEGIN
+       v_plans := DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE(sql_id => '&sql_id');
+     END;
+     /
+
+
+=================================================================
+== 🎯 Motivo 4 — I/O Ruim em Datafiles
+=================================================================
+▶️ Query lenta pode não ser problema da query — pode ser I/O concorrendo num datafile
+▶️ Sintoma típico: "db file sequential read" ou "db file scattered read" altíssimos
+
+-- Continuando no CDB2 / SALES_HISTORY:
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col tablespace_name      format a25
+SQL> col file_name            format a60
+SQL> col physical_reads       format 999,999,999
+SQL> col avg_read_ms          format 999,990.99
+
+-- Top 10 datafiles com maior I/O na sessão:
+SQL> SELECT df.tablespace_name,
+            df.file_name,
+            fs.phyrds                                   AS physical_reads,
+            fs.readtim/NULLIF(fs.phyrds,0) * 10         AS avg_read_ms
+     FROM   v$filestat   fs
+     JOIN   dba_data_files df ON df.file_id = fs.file#
+     ORDER  BY fs.phyrds DESC
+     FETCH FIRST 10 ROWS ONLY;
+
+⚠️ Avg read time saudável < 10 ms (storage SSD), < 20 ms (SAS rápido)
+⚠️ Acima de 50 ms é sinal claro de gargalo de storage
+
+💡 Soluções:
+   ▫️ Adicionar mais datafiles em volumes diferentes
+   ▫️ Mover índices para outra tablespace em outro disco
+   ▫️ Verificar se há concorrência com backup/RMAN no mesmo storage
+
+
+=================================================================
+== 🎯 Motivo 5 — Wait Events que Ninguém Olha
+=================================================================
+▶️ Wait events são o "pulso" do banco — eles te dizem ONDE o tempo está sendo gasto
+▶️ Top 5 wait events por sessão é a primeira coisa que um Sênior olha quando há reclamação de lentidão
+
+-- Conectado em qualquer container:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col event              format a40
+SQL> col total_waits         format 999,999,999,999
+SQL> col total_seconds       format 999,990.99
+
+-- Top 10 eventos de espera no banco (desde a inicialização):
+SQL> SELECT event,
+            total_waits,
+            time_waited_micro/1000000 AS total_seconds
+     FROM   v$system_event
+     WHERE  wait_class != 'Idle'
+     ORDER  BY time_waited_micro DESC
+     FETCH FIRST 10 ROWS ONLY;
+
+-- Wait events agora, em sessões ativas:
+SQL> col username    format a15
+SQL> col event       format a40
+SQL> col seconds     format 999,990.99
+
+SQL> SELECT s.username,
+            s.sid,
+            s.event,
+            s.seconds_in_wait AS seconds
+     FROM   v$session s
+     WHERE  s.status = 'ACTIVE'
+       AND  s.username IS NOT NULL
+       AND  s.wait_class != 'Idle'
+     ORDER  BY s.seconds_in_wait DESC;
+
+💡 Os waits mais comuns e o que cada um significa:
+   ▫️ "db file sequential read"   → lendo blocos via índice (pode ser I/O ruim)
+   ▫️ "db file scattered read"    → full table scan (pode faltar índice)
+   ▫️ "log file sync"             → COMMIT esperando redo (problema no redo storage)
+   ▫️ "library cache: mutex"      → pressão no shared pool, hard parse demais
+   ▫️ "buffer busy waits"         → contenção em blocos quentes
+   ▫️ "enq: TX - row lock"        → bloqueio entre sessões
+
+
+=================================================================
+== 🎯 Roteiro de Diagnóstico Rápido (em < 5 min)
+=================================================================
+▶️ Quando alguém te falar "a query está lenta", siga essa ordem:
+
+1️⃣ Estatísticas estão atualizadas?
+   SQL> SELECT last_analyzed FROM user_tables WHERE table_name = '&tab';
+
+2️⃣ Query está usando o índice esperado?
+   SQL> EXPLAIN PLAN FOR &sql; SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+3️⃣ Plano está estável?
+   SQL> SELECT plan_hash_value FROM v$sql WHERE sql_id = '&sql_id';
+
+4️⃣ Wait events da sessão:
+   SQL> SELECT event, seconds_in_wait FROM v$session WHERE sid = &sid;
+
+5️⃣ I/O dos datafiles está OK?
+   SQL> SELECT * FROM v$filestat WHERE phyrds > 100000;
+
+✅ 80% dos casos resolvem nos passos 1 e 2
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Não dependa só do auto job de estatísticas — em tabelas voláteis, colete manualmente
+💡 Antes de criar índice, verifique se tem outro que poderia ser estendido
+💡 SQL Plan Baselines são seu seguro contra "plano que mudou de noite"
+💡 Monitore wait events continuamente, não só quando há reclamação
+💡 Documente o "plano correto" das suas top queries — assim você sabe quando algo mudou
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ 80% das queries lentas caem em 1 dos 5 motivos: stats, índice, plan, I/O, waits
+▶️ Sempre comece pelo mais barato: estatísticas
+▶️ Use o roteiro de 5 minutos para triagem inicial
+▶️ Wait events são o seu raio-X — aprenda a lê-los
+
+
+=================================================================
+== 🚀 Challenge DBA
+=================================================================
+▶️ Escolha uma query lenta no seu ambiente
+▶️ Aplique o roteiro de 5 minutos e identifique em qual dos 5 motivos ela cai
+▶️ Documente o plano antes e depois da correção
+▶️ Configure um SQL Plan Baseline pra ela
+▶️ Compartilhe o "antes/depois" com seu time
