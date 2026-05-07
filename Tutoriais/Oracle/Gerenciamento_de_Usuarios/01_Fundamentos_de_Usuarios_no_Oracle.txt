@@ -1,0 +1,297 @@
+========================================================================================
+== Fundamentos de Usuários no Oracle
+== Marcio Mandarino
+== 24 de março de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 O que é um usuário no Oracle
+📍 Diferença entre usuário e schema
+📍 Usuários administrativos padrão do Oracle
+📍 Autenticação via sistema operacional
+📍 Funcionamento em ambiente NON-CDB
+📍 Funcionamento em ambiente CDB/PDB
+📍 O que definir antes de criar um usuário
+
+
+=================================================================
+== 🎯 Infraestrutura do Laboratório
+=================================================================
+Virtual Box
+- 1 CPU
+- 4 GB de RAM
+- Oracle Linux 8
+
+Oracle
+- Oracle 19c Enterprise Edition Standalone Server
+- /u01/app/oracle/product/19.3/db_1
+  - ORCL (non container)
+- /u01/app/oracle/product/19.3/db_1
+  - CDB1 (container)
+- /u01/app/oracle/product/19.3/db_2
+  - CDB2 (container)
+
+
+=================================================================
+== 🎯 Ordem dos vídeos
+=================================================================
+🔥 Fundamentos de Usuários no Oracle
+⏳ Como Criar Usuários no Oracle (CREATE USER passo a passo)
+⏳ Tablespaces e Quotas no Oracle: Como Controlar Espaço de Usuários
+⏳ Profiles no Oracle: Como Gerenciar Segurança de Usuários
+⏳ Gerenciamento de Senhas no Oracle: Expiração, Reset e Boas Práticas
+⏳ Privilégios no Oracle: GRANT e REVOKE na prática
+⏳ Privilégios de Objetos no Oracle: Controle de Acesso Completo
+⏳ Roles no Oracle: Como Organizar Permissões (Boas Práticas)
+⏳ Gerenciamento de Usuários no Oracle: Lock, Expiração e Auditoria
+⏳ Como Remover Usuários no Oracle com Segurança (DROP USER)
+
+
+=================================================================
+== 🎯 Introdução
+=================================================================
+▶️ Usuários são a base de segurança no Oracle
+▶️ Tudo começa pelo controle de acesso
+▶️ Qualquer acesso ao banco, é preciso que seja criado um usuário com as devidas permissões
+
+=================================================================
+== 🎯 O que é um Usuário no Oracle
+=================================================================
+▶️ Usuário é uma conta de acesso ao banco de dados
+▶️ Ele pode autenticar e executar ações conforme privilégios recebidos
+▶️ No Oracle, usuário não é apenas login
+💡 Ele também representa a estrutura lógica onde objetos podem existir
+
+
+=================================================================
+== 🎯 Usuário vs Schema
+=================================================================
+▶️ No Oracle, usuário e schema caminham juntos
+▶️ Quando um usuário é criado, o Oracle cria também o schema associado
+▶️ Schema é o conjunto de objetos pertencentes àquele usuário
+  ▫️ Tabelas
+  ▫️ Índices
+  ▫️ Views
+  ▫️ Procedures
+▶️ Exemplo:
+  ▫️ Usuário HR
+  ▫️ Schema HR
+▶️ Na prática, quando falamos que uma tabela pertence ao schema HR, ela pertence ao usuário HR
+
+
+=================================================================
+== 🎯 Usuários Administrativos Padrão do Oracle
+=================================================================
+▶️ O Oracle possui contas administrativas criadas na instalação
+▶️ As mais conhecidas são SYS e SYSTEM
+
+▶️ SYS
+  ▫️ Dono do dicionário de dados
+  ▫️ Possui privilégios máximos
+  ▫️ Deve ser usado com extremo cuidado
+
+▶️ SYSTEM
+  ▫️ Conta administrativa auxiliar
+  ▫️ Usada para tarefas administrativas que não exigem operar como SYS
+
+▶️ Outros usuários padrão podem existir conforme componentes instalados
+  ▫️ Dbsnmp
+  ▫️ Sysman
+  ▫️ Xdb
+  ▫️ Outln
+
+▶️ Boa prática:
+  ▫️ Não usar usuários administrativos como donos de aplicação
+  ▫️ Não usar SYS para tarefas rotineiras sem necessidade
+
+
+=================================================================
+== 🎯 Autenticação via Sistema Operacional
+=================================================================
+▶️ Em ambientes Oracle, um administrador pode se conectar usando autenticação do sistema operacional
+▶️ Exemplo clássico:
+
+$ sqlplus / as sysdba
+
+▶️ Nesse modelo, o Oracle confia no usuário do sistema operacional que pertence ao grupo administrativo
+▶️ Isso permite conexão sem informar usuário e senha do banco
+
+▶️ Uso comum:
+  ▫️ Administração local do servidor
+  ▫️ Startup e shutdown
+  ▫️ Recuperação
+  ▫️ Manutenção crítica
+
+▶️ Ponto importante:
+  ▫️ Sysdba não é apenas um privilégio comum
+  ▫️ É um privilégio administrativo especial
+
+▶️ Quando conectar com:
+  ▫️ Sqlplus / as sysdba
+
+▶️ O acesso ocorre com privilégios administrativos elevados
+▶️ Em muitas operações, a sessão efetivamente atua associada ao usuário SYS
+
+
+=================================================================
+== 🎯 O que Definir Antes de Criar um Usuário
+=================================================================
+▶️ Antes de criar qualquer usuário, precisamos responder 3 perguntas
+
+▶️ 1. O ambiente é CDB ou NON-CDB?
+  ▫️ Isso muda a estratégia de criação
+  ▫️ Em CDB existe diferença entre usuário comum e usuário local
+  ▫️ Em NON-CDB o usuário é criado diretamente no banco
+
+▶️ 2. Em quais ambientes ele terá acesso?
+  ▫️ Somente em um banco non-cdb
+  ▫️ Somente em uma PDB
+  ▫️ Em todas as PDBs, quando fizer sentido administrativo
+  ▫️ Essa decisão define escopo e tipo do usuário
+
+▶️ 3. Quais privilégios ele terá?
+  ▫️ Apenas conexão
+  ▫️ Criação de objetos
+  ▫️ Acesso a tabelas
+  ▫️ Administração
+  ▫️ Isso evita excesso de permissão desde a origem
+
+▶️ Se essas 3 respostas não estiverem claras, a criação do usuário já começa errada
+
+
+=================================================================
+== 🎯 Ambiente NON-CDB (ORCL)
+=================================================================
+▶️ Modelo tradicional
+▶️ Usuário é criado diretamente no banco
+▶️ Não existe separação por containers
+▶️ Todos os usuários pertencem ao mesmo ambiente
+▶️ O escopo de acesso é o próprio banco ORCL
+
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username format a20
+SQL> col account_status format a20
+
+SQL> select username as username,
+  2         account_status as account_status
+  3  from dba_users
+  4  order by username;
+
+
+=================================================================
+== 🎯 Ambiente CDB/PDB
+=================================================================
+▶️ Arquitetura multitenant
+▶️ Existe o container raiz e existem pluggable databases
+▶️ Isso muda completamente o entendimento de escopo do usuário
+
+▶️ Tipos de usuários:
+
+▶️ Usuário comum
+  ▫️ Criado no CDB$ROOT
+  ▫️ Prefixo obrigatório C##
+  ▫️ Pode existir em todos os containers
+
+▶️ Usuário local
+  ▫️ Criado dentro de uma PDB
+  ▫️ Existe somente naquela PDB
+  ▫️ Não é visível como usuário local nas demais PDBs
+
+▶️ Antes de criar, é obrigatório saber:
+  ▫️ Onde estou conectado
+  ▫️ Em qual container estou
+  ▫️ Qual será o alcance desse usuário
+
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col con_id format 999
+SQL> col username format a20
+SQL> col common format a6
+
+SQL> select con_id as con_id,
+  2         username as username,
+  3         common as common
+  4  from cdb_users
+  5  order by con_id, username;
+
+
+=================================================================
+== 🎯 Dicionário de Dados
+=================================================================
+▶️ Principais visões para estudo e administração:
+
+▶️ DBA_USERS
+  ▫️ Usuários do banco
+  ▫️ Muito usada em ambiente NON-CDB
+
+▶️ CDB_USERS
+  ▫️ Visão consolidada para ambiente multitenant
+  ▫️ Mostra usuários por container
+
+▶️ USER_USERS
+  ▫️ Mostra informações do usuário logado
+
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username format a20
+SQL> col account_status format a20
+
+SQL> select username as username,
+  2         account_status as account_status
+  3  from user_users;
+
+
+=================================================================
+== 🎯 Erros Comuns
+=================================================================
+▶️ Achar que schema é separado do usuário
+▶️ Criar usuário sem saber se está em CDB ou NON-CDB
+▶️ Criar usuário no container errado
+▶️ Não diferenciar usuário comum de usuário local
+▶️ Usar SYS ou SYSTEM como usuário de aplicação
+▶️ Não definir privilégios antes da criação
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Sempre confirmar se o ambiente é ORCL, CDB$ROOT ou uma PDB
+💡 Nunca criar usuário sem definir escopo de acesso
+💡 Definir privilégios mínimos necessários desde o início
+💡 Evitar uso indevido de SYS e SYSTEM
+💡 Usar autenticação via SO apenas em contexto administrativo controlado
+💡 Consultar o dicionário de dados antes de administrar contas
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ Usuário é a base de segurança no Oracle
+▶️ Usuário e schema estão diretamente relacionados
+▶️ Em CDB, o tipo do usuário depende do escopo de acesso
+▶️ Contas administrativas exigem cuidado especial
+▶️ Autenticação via sistema operacional é poderosa e deve ser bem compreendida
+▶️ Antes de criar um usuário, é obrigatório definir ambiente, alcance e privilégios
+
+
+=================================================================
+== 🎯 Challenge DBA
+=================================================================
+▶️ Liste os usuários administrativos padrão do seu ambiente
+▶️ Explique a diferença entre SYS e SYSTEM
+▶️ Conecte com autenticação via SO usando sqlplus / as sysdba
+▶️ Identifique se o ambiente atual é NON-CDB, CDB$ROOT ou PDB
+▶️ Explique com suas palavras:
+  ▫️ Usuário
+  ▫️ Schema
+  ▫️ Usuário comum
+  ▫️ Usuário local

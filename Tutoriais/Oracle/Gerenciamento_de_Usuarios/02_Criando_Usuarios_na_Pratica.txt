@@ -1,0 +1,298 @@
+========================================================================================
+== Criando Usuários na Prática (CREATE USER)
+== Marcio Mandarino
+== 24 de março de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+=================================================================
+== 🎯 Ordem dos vídeos
+=================================================================
+✅ Fundamentos de Usuários no Oracle
+🔥 Criando Usuários na Prática (CREATE USER)
+⏳ Tablespaces e Quotas para Usuários
+⏳ Gerenciando Profiles no Oracle
+⏳ Privilégios de Sistema (GRANT / REVOKE)
+⏳ Privilégios de Objetos
+⏳ Roles no Oracle (Boas Práticas)
+⏳ Bloqueio, Expiração e Auditoria de Usuários
+⏳ Removendo Usuários com Segurança (DROP USER)
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 Criação de usuários em NON-CDB
+📍 Criação de usuários em CDB (comum e local)
+📍 Diferença de escopo em ambientes multitenant
+📍 Erro ao conectar sem privilégio
+📍 Privilégio Mínimo
+
+
+=================================================================
+== 🎯 Infraestrutura do Laboratório
+=================================================================
+Virtual Box
+- 1 CPU
+- 4 GB de RAM
+- Oracle Linux 8
+
+Oracle
+- Oracle 19c Enterprise Edition Standalone Server
+- /u01/app/oracle/product/19.3/db_1
+  - ORCL (non container)
+  - CDB1 (container)
+    - HUMAN_RESOURCES
+    - CUSTOMER_ORDERS
+- /u01/app/oracle/product/19.3/db_2
+  - CDB2 (container)
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ Criar usuário é simples, mas criar corretamente exige contexto
+▶️ Ambiente, escopo e privilégio precisam ser definidos antes
+💡 Saiba exatamente aonde criar o usuário e os privilégios necessários
+
+
+=================================================================
+== 🎯 Regra Antes de Criar Usuário
+=================================================================
+▶️ Sempre responder 3 perguntas
+
+▶️ 1. Ambiente é CDB ou NON-CDB?
+▶️ 2. Onde o usuário terá acesso?
+▶️ 3. Quais privilégios ele terá?
+
+
+=================================================================
+== 🎯 Acessando o Ambiente NON-CDB (ORCL)
+=================================================================
+▶️ Preparando ambiente
+$ . oraenv <<< ORCL
+
+▶️ Conectando no banco
+$ sqlplus / as sysdba
+
+
+=================================================================
+== 🎯 Criando Usuário em NON-CDB (ORCL)
+=================================================================
+SQL> create user app1 identified by oracle
+    default tablespace users
+    temporary tablespace temp;
+
+▶️ Validando criação
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username format a20
+SQL> col account_status format a20
+
+SQL> select username as username,
+           account_status as account_status
+    from dba_users
+    where username = 'APP1';
+
+
+=================================================================
+== 🎯 Teste de Acesso (Erro Esperado)
+=================================================================
+▶️ Saindo do SQL*Plus
+
+SQL> exit
+
+▶️ Tentando conectar com usuário recém criado
+
+$ sqlplus app1/oracle
+
+▶️ Resultado:
+
+ORA-01045: user APP1 lacks CREATE SESSION privilege; logon denied
+
+
+=================================================================
+== 🎯 Concedendo Privilégio Mínimo
+=================================================================
+▶️ Voltando como SYS
+
+$ . oraenv <<< ORCL
+$ sqlplus / as sysdba
+
+SQL> grant create session to app1;
+
+▶️ Testando novamente
+
+SQL> exit
+
+$ sqlplus app1/oracle
+
+
+💡 Nesta série vamos aprofundar privilégios mais à frente
+
+
+=================================================================
+== 🎯 Usuário Comum (Todos os PDBs)
+=================================================================
+▶️ Ajustando ambiente para CDB
+
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+▶️ Criando usuário comum
+
+SQL> create user c##app identified by oracle container = all;
+SQL> grant create session to c##app container = all;
+SQL> grant set container to c##app container = all;
+
+▶️ Validando
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username format a20
+SQL> col common format a6
+
+SQL> select username as username,
+           common as common
+    from cdb_users
+    where username like 'C##APP';
+
+
+=================================================================
+== 🎯 Usuários em Alguns PDBs (Local User)
+=================================================================
+▶️ Usuários locais em PDBs específicos
+
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> create user app_local identified by oracle;
+
+SQL> alter session set container = CUSTOMER_ORDERS;
+
+SQL> create user app_local identified by oracle;
+
+▶️ Mesmo nome, usuários diferentes
+▶️ Cada PDB possui seu próprio usuário
+
+
+=================================================================
+== 🎯 Scripts de Consulta (users.sql)
+=================================================================
+/* Script: users.sql | Autor: Marcio Mandarino
+ Descrição: Exibe os usuários do banco filtrando pelo nome informado
+ Parâmetros: 1   (&1 = parte do nome do usuário)
+ Exemplo de uso: @users app
+ Observações: Utiliza LIKE para busca parcial (case insensitive)
+ ---------------------------------------------------------------------
+ Histórico:
+ --------------------------------------------------------------------- */
+
+SET LINES 900
+SET VERIFY OFF
+
+col username              form a30
+col account_status        form a20
+col default_tablespace    form a20
+col temporary_tablespace  form a20
+col last_login            form a22
+col profile               form a30
+col oracle_maintained     form a18
+
+SELECT username,
+       created,
+       profile,
+       to_char(last_login,'DD/MM/RRRR HH24:MI:SS') last_login,
+       oracle_maintained,
+       common,
+       account_status,
+       lock_date,
+       default_tablespace,
+       temporary_tablespace
+FROM dba_users
+WHERE username LIKE UPPER('%&1%')
+ORDER BY username;
+
+
+=================================================================
+== 🎯 Scripts de Consulta (users2.sql)
+=================================================================
+/* Script: users2.sql | Autor: Marcio Mandarino
+ Descrição: Exibe os usuários do banco com filtro dinâmico e ordenação definida pelo usuário
+ Parâmetros: 2   (&1 = filtro WHERE | &2 = ORDER BY)
+ Exemplo de uso: @users2 "oracle_maintained='N'" "username"
+ Observações: Utiliza a visão DBA_USERS para consulta detalhada
+ ---------------------------------------------------------------------
+ Histórico:
+ --------------------------------------------------------------------- */
+
+SET LINES 900
+SET VERIFY OFF
+
+col username              form a30
+col account_status        form a20
+col default_tablespace    form a20
+col temporary_tablespace  form a20
+col last_login            form a22
+col profile               form a30
+col oracle_maintained     form a18
+
+SELECT username,
+       created,
+       profile,
+       to_char(last_login,'DD/MM/RRRR HH24:MI:SS') last_login,
+       oracle_maintained,
+       common,
+       account_status,
+       lock_date,
+       default_tablespace,
+       temporary_tablespace
+FROM dba_users
+WHERE &1
+ORDER BY &2;
+
+
+=================================================================
+== 🎯 Usando os Scripts
+=================================================================
+▶️ Conectando novamente
+
+$ . oraenv <<< ORCL
+$ sqlplus / as sysdba
+
+▶️ Filtrando por nome
+
+SQL> @users app
+
+▶️ Filtro avançado
+
+SQL> @users2 "account_status='OPEN'" 1
+
+
+
+=================================================================
+== 🎯 Boas Práticas
+=================================================================
+💡 Sempre definir escopo antes de criar usuário
+💡 Crie o usuário apenas nos ambientes que ele precisa de acesso
+
+
+=================================================================
+== 🎯 Conclusão
+=================================================================
+▶️ Criar usuário é simples, mas exige contexto
+▶️ Ambientes NON-CDB e CDB possuem comportamentos diferentes
+▶️ Usuário criado sem nenhum privilégio, não tem acesso ao banco
+▶️ CREATE SESSION é o mínimo necessário
+
+
+=================================================================
+== 🎯 Challenge DBA
+=================================================================
+▶️ Configure o ambiente ORCL com oraenv e crie um usuário
+▶️ Teste o erro de login
+▶️ Corrija com CREATE SESSION
+▶️ Configure o ambiente CDB1 com oraenv
+▶️ Crie um usuário comum
+▶️ Crie usuários locais em duas PDBs
+▶️ Utilize os scripts para validar os usuários
