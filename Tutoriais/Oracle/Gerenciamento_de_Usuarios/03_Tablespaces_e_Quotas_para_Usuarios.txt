@@ -1,0 +1,304 @@
+========================================================================================
+== Tablespaces e Quotas para Usuários
+== Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 Por que quotas existem
+📍 DEFAULT TABLESPACE vs QUOTA — não confunda
+📍 Criando usuário já com quota
+📍 ORA-01536 — quando o usuário não tem quota
+📍 Ajustando quota com ALTER USER
+📍 Quota em múltiplas tablespaces (cenário data + índice)
+📍 Cuidado com UNLIMITED TABLESPACE
+📍 Removendo a quota — diferença entre 0 e DROP
+📍 Consultando o uso real no dicionário de dados
+📍 Boas práticas e Challenge DBA
+
+
+=================================================================
+== 🎯 Ordem dos vídeos (Playlist Gerenciamento de Usuários)
+=================================================================
+✅ Fundamentos de Usuários no Oracle
+✅ Criando Usuários na Prática (CREATE USER)
+🔥 Tablespaces e Quotas para Usuários
+⏳ Gerenciando Profiles no Oracle
+⏳ Privilégios de Sistema (GRANT / REVOKE)
+⏳ Privilégios de Objetos
+⏳ Roles no Oracle (Boas Práticas)
+⏳ Bloqueio, Expiração e Auditoria de Usuários
+⏳ Removendo Usuários com Segurança (DROP USER)
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ Quota é o limite de espaço que um usuário pode consumir em uma tablespace específica
+▶️ Sem quota, o usuário até consegue se conectar e ler dados — mas NÃO consegue criar nenhum segmento (tabela, índice, etc.)
+▶️ Um usuário pode ter quota em várias tablespaces — uma para dados, outra para índices, outra para anexos, etc.
+▶️ A quota é independente da DEFAULT TABLESPACE: ter default em USERS não significa ter permissão para gravar lá
+⚠️ A privilegiada UNLIMITED TABLESPACE ignora qualquer quota — use com muita parcimônia
+💡 Um padrão comum em sistemas corporativos é separar tabelas em uma tablespace e índices em outra para reduzir contenção de I/O
+
+
+=================================================================
+== 🎯 DEFAULT TABLESPACE vs QUOTA — esclarecendo a confusão
+=================================================================
+▶️ DEFAULT TABLESPACE  → onde o segmento será criado SE o usuário não especificar uma tablespace no CREATE
+▶️ TEMPORARY TABLESPACE → onde os segmentos temporários (sorts, joins) serão alocados
+▶️ QUOTA                → quanto de espaço o usuário pode consumir em uma tablespace
+⚠️ Um usuário pode ter DEFAULT TABLESPACE = USERS e ainda assim NÃO conseguir criar nada lá — se não tiver quota
+
+
+=================================================================
+== 🎯 Cenário 1 — Usuário com quota desde a criação (CDB1 / HUMAN_RESOURCES)
+=================================================================
+-- Definindo o ambiente:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Criando o usuário com quota explícita já no CREATE:
+SQL> CREATE USER hr_app
+     IDENTIFIED BY "SenhaForte#2026"
+     DEFAULT TABLESPACE   users
+     TEMPORARY TABLESPACE temp
+     QUOTA 500M ON users;
+
+-- Concedendo o privilégio mínimo para conectar:
+SQL> GRANT CREATE SESSION, CREATE TABLE TO hr_app;
+
+
+=================================================================
+== 🎯 Cenário 2 — ORA-01536 na prática (usuário SEM quota)
+=================================================================
+-- Voltando para o sysdba e criando outro usuário, dessa vez sem quota:
+SQL> conn / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> CREATE USER hr_app_nq
+     IDENTIFIED BY "SenhaForte#2026"
+     DEFAULT TABLESPACE   users
+     TEMPORARY TABLESPACE temp;
+
+SQL> GRANT CREATE SESSION, CREATE TABLE TO hr_app_nq;
+
+-- Conectando com o usuário e tentando criar uma tabela:
+SQL> conn hr_app_nq/SenhaForte#2026@HUMAN_RESOURCES
+
+SQL> CREATE TABLE colaboradores (
+       id      NUMBER,
+       nome    VARCHAR2(100),
+       salario NUMBER(10,2)
+     );
+
+-- Resultado esperado:
+ORA-01536: space quota exceeded for tablespace 'USERS'
+
+💡 Note: o erro acontece na hora de alocar o segmento, não na hora do GRANT
+
+
+=================================================================
+== 🎯 Cenário 3 — Ajustando a quota com ALTER USER
+=================================================================
+SQL> conn / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+-- Concedendo 200 MB de quota ao usuário hr_app_nq:
+SQL> ALTER USER hr_app_nq QUOTA 200M ON users;
+
+-- Reconectando e testando novamente:
+SQL> conn hr_app_nq/SenhaForte#2026@HUMAN_RESOURCES
+SQL> CREATE TABLE colaboradores (
+       id      NUMBER,
+       nome    VARCHAR2(100),
+       salario NUMBER(10,2)
+     );
+
+-- Verificando onde foi criado:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col segment_name    format a30
+SQL> col tablespace_name format a25
+SQL> col size_gb         format 999,990.99
+
+SQL> SELECT segment_name,
+            tablespace_name,
+            bytes/1024/1024/1024 AS size_gb
+     FROM   user_segments;
+
+
+=================================================================
+== 🎯 Cenário 4 — Quota em múltiplas tablespaces (CDB2 / SALES_HISTORY)
+=================================================================
+▶️ Padrão corporativo: uma tablespace para dados (TBS_SH_DATA) e outra para índices (TBS_SH_IDX)
+
+-- Alternando para o CDB2:
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+
+SQL> alter session set container = SALES_HISTORY;
+
+SQL> set lines 200
+SQL> set pages 200
+
+-- Criando as duas tablespaces:
+SQL> CREATE TABLESPACE tbs_sh_data
+     DATAFILE '/u01/app/oracle/oradata/CDB2/sales_history/tbs_sh_data01.dbf'
+     SIZE 1G AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
+
+SQL> CREATE TABLESPACE tbs_sh_idx
+     DATAFILE '/u01/app/oracle/oradata/CDB2/sales_history/tbs_sh_idx01.dbf'
+     SIZE 1G AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
+
+-- Criando o usuário sh_app com quotas distintas:
+SQL> CREATE USER sh_app
+     IDENTIFIED BY "SenhaForte#2026"
+     DEFAULT TABLESPACE   tbs_sh_data
+     TEMPORARY TABLESPACE temp
+     QUOTA 2G          ON tbs_sh_data
+     QUOTA UNLIMITED   ON tbs_sh_idx;
+
+SQL> GRANT CREATE SESSION, CREATE TABLE, CREATE INDEX TO sh_app;
+
+-- Conectando como sh_app:
+SQL> conn sh_app/SenhaForte#2026@SALES_HISTORY
+
+-- Tabela criada na tablespace default (tbs_sh_data):
+SQL> CREATE TABLE vendas (
+       id           NUMBER,
+       data_venda   DATE,
+       valor_total  NUMBER(12,2)
+     );
+
+-- Índice direcionado para a tablespace de índices:
+SQL> CREATE INDEX idx_vendas_data ON vendas(data_venda)
+     TABLESPACE tbs_sh_idx;
+
+-- Verificando a separação:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col segment_name    format a30
+SQL> col segment_type    format a15
+SQL> col tablespace_name format a20
+
+SQL> SELECT segment_name,
+            segment_type,
+            tablespace_name
+     FROM   user_segments
+     ORDER  BY segment_type, segment_name;
+
+
+=================================================================
+== 🎯 Cuidado com UNLIMITED TABLESPACE
+=================================================================
+⚠️ A privilegiada UNLIMITED TABLESPACE ignora qualquer quota e dá ao usuário acesso ilimitado a TODAS as tablespaces
+
+-- Exemplo de como esse privilégio é entregue (muitas vezes sem perceber):
+SQL> conn / as sysdba
+SQL> alter session set container = SALES_HISTORY;
+
+-- Quando você concede RESOURCE, o Oracle (até 11g) entregava UNLIMITED TABLESPACE junto.
+-- A partir do 12c isso foi removido — mas vale verificar:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col grantee  format a20
+SQL> col privilege format a30
+
+SQL> SELECT grantee,
+            privilege
+     FROM   dba_sys_privs
+     WHERE  privilege = 'UNLIMITED TABLESPACE'
+     ORDER  BY grantee;
+
+-- Para revogar de um usuário específico:
+SQL> REVOKE UNLIMITED TABLESPACE FROM sh_app;
+
+
+=================================================================
+== 🎯 Removendo a quota — QUOTA 0 vs DROP
+=================================================================
+▶️ Definir QUOTA 0 → impede o usuário de alocar NOVO espaço, mas mantém os segmentos existentes
+▶️ Não existe sintaxe DROP QUOTA — você usa QUOTA 0 ou REVOKE UNLIMITED TABLESPACE
+
+-- Removendo a quota do hr_app_nq:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> ALTER USER hr_app_nq QUOTA 0 ON users;
+
+-- O usuário pode continuar lendo as tabelas que já existem,
+-- mas qualquer INSERT que precise de extensão vai falhar com ORA-01536
+
+
+=================================================================
+== 🎯 Consultando uso e limite de quotas
+=================================================================
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username        format a20
+SQL> col tablespace_name format a20
+SQL> col used_gb         format 999,990.99
+SQL> col max_gb          format 999,990.99
+SQL> col status          format a12
+
+-- DBA_TS_QUOTAS mostra o uso atual e o limite por usuário/tablespace:
+SQL> SELECT username,
+            tablespace_name,
+            bytes    /1024/1024/1024 AS used_gb,
+            max_bytes/1024/1024/1024 AS max_gb,
+            CASE WHEN max_bytes = -1 THEN 'UNLIMITED' ELSE 'LIMITED' END AS status
+     FROM   dba_ts_quotas
+     WHERE  username IN ('HR_APP', 'HR_APP_NQ')
+     ORDER  BY username, tablespace_name;
+
+💡 Quando max_bytes = -1, significa QUOTA UNLIMITED
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Nunca conceda quota nas tablespaces SYSTEM ou SYSAUX
+💡 Defina sempre DEFAULT TABLESPACE e TEMPORARY TABLESPACE explicitamente
+💡 Evite QUOTA UNLIMITED — prefira limites realistas com monitoramento
+💡 Separe dados e índices em tablespaces diferentes (TBS_<APP>_DATA / TBS_<APP>_IDX)
+💡 Revogue UNLIMITED TABLESPACE de usuários de aplicação
+💡 Monitore DBA_TS_QUOTAS regularmente para antecipar crescimento
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ DEFAULT TABLESPACE diz "para onde vai" — QUOTA diz "quanto pode usar"
+▶️ Sem quota, qualquer DDL que aloque segmento falha com ORA-01536
+▶️ Quotas em múltiplas tablespaces são a base do padrão data/index
+▶️ UNLIMITED TABLESPACE é uma armadilha — sempre revogue de usuários de aplicação
+▶️ DBA_TS_QUOTAS é seu raio-X de consumo por usuário
+
+
+=================================================================
+== 🚀 Challenge DBA
+=================================================================
+▶️ Crie o usuário sales_app no CDB2/ORDER_ENTRY com quota 1G em TBS_OE_DATA e UNLIMITED em TBS_OE_IDX
+▶️ Provoque o ORA-01536 criando uma tabela sem quota e depois corrija
+▶️ Crie uma view materializada usando duas tablespaces diferentes
+▶️ Identifique todos os usuários da PDB que têm UNLIMITED TABLESPACE
+▶️ Use DBA_TS_QUOTAS para gerar um relatório de uso em GB com 2 casas decimais
