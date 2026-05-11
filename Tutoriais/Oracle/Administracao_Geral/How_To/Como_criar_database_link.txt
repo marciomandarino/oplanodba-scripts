@@ -1,0 +1,48 @@
+== Como criar database link - DBA na Prática
+== Marcio Mandarino
+
+[INTRO sucinta]
+"Nesse vídeo a gente cria um database link no Oracle — útil quando você precisa consultar dados de outro banco direto de uma query SQL."
+
+[INTRO falada - 5s]
+"Bora aprender a criar um database link no Oracle, em menos de 5 minutos."
+
+[SETUP - 10s]
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> ALTER SESSION SET CONTAINER = HUMAN_RESOURCES;
+
+[EXECUÇÃO]
+-- Criar o database link apontando para o PDB SALES_HISTORY no CDB2
+SQL> CREATE DATABASE LINK to_sales_history
+  2  CONNECT TO sh IDENTIFIED BY oracle
+  3  USING 'localhost:1522/SALES_HISTORY';
+
+[VALIDAÇÃO - 15s]
+-- Testar a conexão pelo link
+SQL> set lines 200
+SQL> set pages 200
+SQL> col owner         format a20
+SQL> col segment_name  format a30
+SQL> col segment_type  format a15
+
+SQL> SELECT owner,
+  2         segment_name,
+  3         segment_type
+  4  FROM   dba_segments@to_sales_history
+  5  WHERE  owner = 'SH'
+  6  AND    ROWNUM <= 5;
+
+-- Confirmar o link no catálogo
+SQL> col db_link    format a30
+SQL> col username   format a20
+SQL> col host       format a40
+
+SQL> SELECT db_link,
+  2         username,
+  3         host
+  4  FROM   dba_db_links;
+
+[FECHAMENTO - 5s]
+"Pronto. Tá no GitHub do canal. Te vejo no próximo."
