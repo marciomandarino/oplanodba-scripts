@@ -14,6 +14,7 @@
 =================================================================
 ▶️ O Database Link permite consultar dados de outro banco Oracle direto de uma query SQL — sem precisar exportar ou copiar dados
 ▶️ Útil quando você precisa integrar informações entre PDBs ou bancos diferentes em tempo real
+▶️ Existem duas formas de definir o destino: via Easy Connect (host:porta/serviço) ou via alias do tnsnames.ora
 
 
 =================================================================
@@ -28,18 +29,46 @@ SQL> ALTER SESSION SET CONTAINER = HUMAN_RESOURCES;
 
 
 =================================================================
-== 🎯 Execução
+== 🎯 Forma 1 — Easy Connect (host:porta/serviço)
 =================================================================
--- Cria o database link apontando para o usuário sh na PDB SALES_HISTORY
-SQL> CREATE DATABASE LINK to_sales_history
+-- Não exige configuração prévia no tnsnames.ora
+-- Toda informação de conexão fica embutida no comando
+
+SQL> CREATE DATABASE LINK to_sales_history_ec
      CONNECT TO sh IDENTIFIED BY oracle
      USING 'localhost:1522/SALES_HISTORY';
 
 
 =================================================================
+== 🎯 Forma 2 — Usando alias do tnsnames.ora
+=================================================================
+-- Primeiro, configurar o alias no tnsnames.ora do servidor:
+
+$ vi $ORACLE_HOME/network/admin/tnsnames.ora
+
+-- Adicionar a entrada:
+SALES_HISTORY =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1522))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = SALES_HISTORY)
+    )
+  )
+
+-- Validar o alias antes de criar o link:
+$ tnsping SALES_HISTORY
+
+-- Agora criar o database link usando o alias:
+SQL> CREATE DATABASE LINK to_sales_history_tns
+     CONNECT TO sh IDENTIFIED BY oracle
+     USING 'SALES_HISTORY';
+
+
+=================================================================
 == 🎯 Validação
 =================================================================
--- Testar a conexão acessando dados pelo link
+-- Testar a conexão acessando dados pelos dois links
 SQL> set lines 200
 SQL> set pages 200
 SQL> col owner         format a20
@@ -49,11 +78,18 @@ SQL> col segment_type  format a15
 SQL> SELECT owner,
             segment_name,
             segment_type
-     FROM   dba_segments@to_sales_history
+     FROM   dba_segments@to_sales_history_ec
      WHERE  owner = 'SH'
      AND    ROWNUM <= 5;
 
--- Confirmar o link no catálogo
+SQL> SELECT owner,
+            segment_name,
+            segment_type
+     FROM   dba_segments@to_sales_history_tns
+     WHERE  owner = 'SH'
+     AND    ROWNUM <= 5;
+
+-- Confirmar os dois links no catálogo
 SQL> col db_link    format a30
 SQL> col username   format a20
 SQL> col host       format a40
@@ -62,3 +98,11 @@ SQL> SELECT db_link,
             username,
             host
      FROM   dba_db_links;
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ Easy Connect é mais rápido — não precisa configurar nada no servidor, ideal pra ambientes ad-hoc ou de teste
+▶️ Alias do tnsnames.ora é mais limpo — abstrai a string de conexão e permite alterar host/porta em um lugar só, ideal pra produção
+▶️ Em ambos os casos, o usuário remoto (sh) e a senha ficam armazenados no link — gerencie com cuidado
