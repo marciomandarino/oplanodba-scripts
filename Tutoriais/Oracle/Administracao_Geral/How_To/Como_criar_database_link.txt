@@ -1,26 +1,45 @@
-== Como criar database link - DBA na Prática
+========================================================================================
+== Como criar um Database Link no Oracle - DBA na Prática
 == Marcio Mandarino
+== 07 de maio de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
 
-[INTRO sucinta]
-"Nesse vídeo a gente cria um database link no Oracle — útil quando você precisa consultar dados de outro banco direto de uma query SQL."
 
-[INTRO falada - 5s]
-"Bora aprender a criar um database link no Oracle, em menos de 5 minutos."
 
-[SETUP - 10s]
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ O Database Link permite consultar dados de outro banco Oracle direto de uma query SQL — sem precisar exportar ou copiar dados
+▶️ Útil quando você precisa integrar informações entre PDBs ou bancos diferentes em tempo real
+
+
+=================================================================
+== 🎯 Setup
+=================================================================
+-- Vamos criar um link da PDB HUMAN_RESOURCES (CDB1) para a PDB SALES_HISTORY (CDB2)
+
 $ . oraenv <<< CDB1
 $ sqlplus / as sysdba
 
 SQL> ALTER SESSION SET CONTAINER = HUMAN_RESOURCES;
 
-[EXECUÇÃO]
--- Criar o database link apontando para o PDB SALES_HISTORY no CDB2
-SQL> CREATE DATABASE LINK to_sales_history
-  2  CONNECT TO sh IDENTIFIED BY oracle
-  3  USING 'localhost:1522/SALES_HISTORY';
 
-[VALIDAÇÃO - 15s]
--- Testar a conexão pelo link
+=================================================================
+== 🎯 Execução
+=================================================================
+-- Cria o database link apontando para o usuário sh na PDB SALES_HISTORY
+SQL> CREATE DATABASE LINK to_sales_history
+     CONNECT TO sh IDENTIFIED BY oracle
+     USING 'localhost:1522/SALES_HISTORY';
+
+
+=================================================================
+== 🎯 Validação
+=================================================================
+-- Testar a conexão acessando dados pelo link
 SQL> set lines 200
 SQL> set pages 200
 SQL> col owner         format a20
@@ -28,11 +47,11 @@ SQL> col segment_name  format a30
 SQL> col segment_type  format a15
 
 SQL> SELECT owner,
-  2         segment_name,
-  3         segment_type
-  4  FROM   dba_segments@to_sales_history
-  5  WHERE  owner = 'SH'
-  6  AND    ROWNUM <= 5;
+            segment_name,
+            segment_type
+     FROM   dba_segments@to_sales_history
+     WHERE  owner = 'SH'
+     AND    ROWNUM <= 5;
 
 -- Confirmar o link no catálogo
 SQL> col db_link    format a30
@@ -40,9 +59,6 @@ SQL> col username   format a20
 SQL> col host       format a40
 
 SQL> SELECT db_link,
-  2         username,
-  3         host
-  4  FROM   dba_db_links;
-
-[FECHAMENTO - 5s]
-"Pronto. Tá no GitHub do canal. Te vejo no próximo."
+            username,
+            host
+     FROM   dba_db_links;
