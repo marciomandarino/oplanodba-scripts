@@ -96,7 +96,7 @@ SQL> CREATE USER hr_app_nq
 SQL> GRANT CREATE SESSION, CREATE TABLE TO hr_app_nq;
 
 -- Conectando com o usuário e tentando criar uma tabela:
-SQL> conn hr_app_nq/SenhaForte#2026@HUMAN_RESOURCES
+SQL> conn hr_app_nq/"SenhaForte#2026"@//192.168.0.68:1521/HUMAN_RESOURCES
 
 SQL> CREATE TABLE colaboradores (
        id      NUMBER,
@@ -120,7 +120,7 @@ SQL> alter session set container = HUMAN_RESOURCES;
 SQL> ALTER USER hr_app_nq QUOTA 200M ON users;
 
 -- Reconectando e testando novamente:
-SQL> conn hr_app_nq/SenhaForte#2026@HUMAN_RESOURCES
+SQL> conn hr_app_nq/"SenhaForte#2026"@//192.168.0.68:1521/HUMAN_RESOURCES
 SQL> CREATE TABLE colaboradores (
        id      NUMBER,
        nome    VARCHAR2(100),
@@ -132,11 +132,12 @@ SQL> set lines 200
 SQL> set pages 200
 SQL> col segment_name    format a30
 SQL> col tablespace_name format a25
-SQL> col size_gb         format 999,990.99
+SQL> col size_mb         format 999G999G990D99
 
+-- Tabela de demonstração é pequena: exibimos em MB para o valor não aparecer como 0,00 GB
 SQL> SELECT segment_name,
             tablespace_name,
-            bytes/1024/1024/1024 AS size_gb
+            bytes/1024/1024 AS size_mb
      FROM   user_segments;
 
 
@@ -155,6 +156,8 @@ SQL> set lines 200
 SQL> set pages 200
 
 -- Criando as duas tablespaces:
+-- ⚠️ Confirme o diretório real da PDB antes (SELECT name FROM v$datafile;).
+--    Se o ambiente usar OMF, basta omitir o caminho: DATAFILE SIZE 1G AUTOEXTEND ON ...
 SQL> CREATE TABLESPACE tbs_sh_data
      DATAFILE '/u01/app/oracle/oradata/CDB2/sales_history/tbs_sh_data01.dbf'
      SIZE 1G AUTOEXTEND ON NEXT 256M MAXSIZE 4G;
@@ -174,7 +177,7 @@ SQL> CREATE USER sh_app
 SQL> GRANT CREATE SESSION, CREATE TABLE, CREATE INDEX TO sh_app;
 
 -- Conectando como sh_app:
-SQL> conn sh_app/SenhaForte#2026@SALES_HISTORY
+SQL> conn sh_app/"SenhaForte#2026"@//192.168.0.68:1521/SALES_HISTORY
 
 -- Tabela criada na tablespace default (tbs_sh_data):
 SQL> CREATE TABLE vendas (
@@ -223,7 +226,16 @@ SQL> SELECT grantee,
      WHERE  privilege = 'UNLIMITED TABLESPACE'
      ORDER  BY grantee;
 
--- Para revogar de um usuário específico:
+-- ⚠️ Atenção: o sh_app foi criado apenas com QUOTAS, e NÃO com este system privilege.
+-- Revogar um privilégio que o usuário não possui gera ORA-01952.
+-- Para demonstrar o ciclo, primeiro concedemos (cenário que queremos evitar) e depois revogamos:
+
+-- 1) Concedendo o privilégio (é exatamente isso que NÃO se deve deixar solto):
+SQL> GRANT UNLIMITED TABLESPACE TO sh_app;
+
+-- 2) Confirme que agora ele aparece na consulta dba_sys_privs acima.
+
+-- 3) Revogando para devolver o controle às quotas:
 SQL> REVOKE UNLIMITED TABLESPACE FROM sh_app;
 
 
@@ -256,8 +268,8 @@ SQL> set lines 200
 SQL> set pages 200
 SQL> col username        format a20
 SQL> col tablespace_name format a20
-SQL> col used_gb         format 999,990.99
-SQL> col max_gb          format 999,990.99
+SQL> col used_gb         format 999G999G990D99
+SQL> col max_gb          format 999G999G990D99
 SQL> col status          format a12
 
 -- DBA_TS_QUOTAS mostra o uso atual e o limite por usuário/tablespace:
