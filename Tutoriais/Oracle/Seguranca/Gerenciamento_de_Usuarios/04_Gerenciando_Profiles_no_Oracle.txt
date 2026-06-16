@@ -1,0 +1,480 @@
+========================================================================================
+== Gerenciando Profiles no Oracle
+== Marcio Mandarino
+== 16 de junho de 2026
+== marcio@mrdba.com.br
+== https://mrdba.com.br/bio
+========================================================================================
+
+
+
+
+=================================================================
+== 🎯 Resumo do vídeo:
+=================================================================
+📍 O que é um profile e para que serve
+📍 Os dois tipos de limite: senha (PASSWORD) e recursos (KERNEL)
+📍 Anatomia do profile DEFAULT no dicionário de dados
+📍 Criando um profile de segurança de senha (CREATE PROFILE)
+📍 FAILED_LOGIN_ATTEMPTS na prática — ORA-28000 (conta bloqueada)
+📍 Expiração de senha e período de tolerância — ORA-28001
+📍 Função de verificação de senha (PASSWORD_VERIFY_FUNCTION) — ORA-28003
+📍 Limites de recursos e o parâmetro RESOURCE_LIMIT — ORA-02391
+📍 Alterando e trocando profiles (ALTER PROFILE / ALTER USER)
+📍 Removendo profiles com segurança (DROP PROFILE ... CASCADE)
+📍 Profiles em ambiente CDB/PDB (profile comum C##)
+📍 Boas práticas e Challenge DBA
+
+
+=================================================================
+== 🎯 Ordem dos vídeos (Playlist Gerenciamento de Usuários)
+=================================================================
+✅ Fundamentos de Usuários no Oracle
+✅ Criando Usuários na Prática (CREATE USER)
+✅ Tablespaces e Quotas para Usuários
+🔥 Gerenciando Profiles no Oracle
+⏳ Privilégios de Sistema (GRANT / REVOKE)
+⏳ Privilégios de Objetos
+⏳ Roles no Oracle (Boas Práticas)
+⏳ Bloqueio, Expiração e Auditoria de Usuários
+⏳ Removendo Usuários com Segurança (DROP USER)
+
+
+=================================================================
+== 🎯 Infraestrutura do Laboratório
+=================================================================
+Virtual Box
+- 1 CPU
+- 4 GB de RAM
+- Oracle Linux 8
+
+Oracle
+- Oracle 19c Enterprise Edition Standalone Server
+- /u01/app/oracle/product/19.3/db_1
+  - ORCL (non container)
+  - CDB1 (container)
+    - HUMAN_RESOURCES
+    - CUSTOMER_ORDERS
+- /u01/app/oracle/product/19.3/db_2
+  - CDB2 (container)
+    - SALES_HISTORY
+    - ORDER_ENTRY
+    - PRODUCT_MEDIA
+
+IP do servidor: 192.168.0.68  (porta 1521)
+
+
+=================================================================
+== 🎯 Visão Geral
+=================================================================
+▶️ Profile é um conjunto NOMEADO de limites que o Oracle aplica a um ou mais usuários
+▶️ Todo usuário tem exatamente UM profile — se você não informar, ele recebe o DEFAULT
+▶️ O profile controla duas frentes bem distintas:
+  ▫️ Política de SENHA (tentativas, validade, reuso, complexidade)
+  ▫️ Limites de RECURSOS (sessões simultâneas, tempo ocioso, CPU por chamada, etc.)
+💡 Profile não concede privilégio nenhum — ele apenas LIMITA. Privilégio é GRANT, limite é PROFILE.
+⚠️ Os limites de senha valem sempre; já os limites de recurso só são aplicados se RESOURCE_LIMIT = TRUE
+
+
+=================================================================
+== 🎯 Os dois tipos de limite (RESOURCE_TYPE)
+=================================================================
+▶️ PASSWORD → política de senha (sempre aplicada, independe de parâmetro)
+  ▫️ FAILED_LOGIN_ATTEMPTS    → tentativas erradas antes de bloquear a conta
+  ▫️ PASSWORD_LOCK_TIME       → por quantos dias a conta fica bloqueada
+  ▫️ PASSWORD_LIFE_TIME       → validade da senha em dias
+  ▫️ PASSWORD_GRACE_TIME      → tolerância (em dias) após expirar para trocar
+  ▫️ PASSWORD_REUSE_TIME      → dias até poder reutilizar uma senha antiga
+  ▫️ PASSWORD_REUSE_MAX       → quantas trocas antes de poder repetir uma senha
+  ▫️ PASSWORD_VERIFY_FUNCTION → função que valida a complexidade da senha
+  ▫️ INACTIVE_ACCOUNT_TIME    → bloqueia conta sem login há X dias (mínimo 15)
+
+▶️ KERNEL → limites de recurso da sessão (exigem RESOURCE_LIMIT = TRUE)
+  ▫️ SESSIONS_PER_USER          → sessões simultâneas por usuário
+  ▫️ CONNECT_TIME               → tempo máximo de conexão (minutos)
+  ▫️ IDLE_TIME                  → tempo máximo ocioso (minutos)
+  ▫️ CPU_PER_SESSION            → CPU por sessão (centésimos de segundo)
+  ▫️ CPU_PER_CALL               → CPU por chamada (centésimos de segundo)
+  ▫️ LOGICAL_READS_PER_SESSION  → blocos lidos por sessão
+  ▫️ LOGICAL_READS_PER_CALL     → blocos lidos por chamada
+  ▫️ PRIVATE_SGA                → memória privada em Shared Server
+  ▫️ COMPOSITE_LIMIT            → limite composto (peso combinado de recursos)
+
+
+=================================================================
+== 🎯 Cenário 1 — Anatomia do profile DEFAULT (CDB1 / HUMAN_RESOURCES)
+=================================================================
+-- Definindo o ambiente:
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+
+SQL> alter session set container = HUMAN_RESOURCES;
+
+-- Todo usuário que não recebe um profile explícito herda o DEFAULT.
+-- Vamos enxergar o que ele contém:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col profile       format a18
+SQL> col resource_name format a28
+SQL> col resource_type format a10
+SQL> col limit         format a18
+
+SQL> SELECT profile,
+            resource_name,
+            resource_type,
+            limit
+     FROM   dba_profiles
+     WHERE  profile = 'DEFAULT'
+     ORDER  BY resource_type, resource_name;
+
+💡 Repare na coluna RESOURCE_TYPE: as linhas PASSWORD são a política de senha
+   e as linhas KERNEL são os limites de recurso. No DEFAULT quase todo KERNEL vem UNLIMITED.
+
+
+=================================================================
+== 🎯 Cenário 2 — Profile de segurança de senha (CDB1 / HUMAN_RESOURCES)
+=================================================================
+-- Criando um profile com política de senha mais rígida:
+SQL> CREATE PROFILE prf_app_hr LIMIT
+        FAILED_LOGIN_ATTEMPTS   3
+        PASSWORD_LOCK_TIME      1
+        PASSWORD_LIFE_TIME      90
+        PASSWORD_GRACE_TIME     7
+        PASSWORD_REUSE_TIME     365
+        PASSWORD_REUSE_MAX      5
+        INACTIVE_ACCOUNT_TIME   30;
+
+-- Criando um usuário já com o profile e dando o privilégio mínimo de conexão:
+SQL> CREATE USER hr_seg
+        IDENTIFIED BY "SenhaForte#2026"
+        DEFAULT TABLESPACE   users
+        TEMPORARY TABLESPACE temp
+        QUOTA 100M ON users
+        PROFILE prf_app_hr;
+
+SQL> GRANT CREATE SESSION TO hr_seg;
+
+-- Conferindo qual profile o usuário está usando:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username       format a20
+SQL> col profile        format a18
+SQL> col account_status format a18
+
+SQL> SELECT username,
+            profile,
+            account_status
+     FROM   dba_users
+     WHERE  username = 'HR_SEG';
+
+
+=================================================================
+== 🎯 Cenário 2.1 — FAILED_LOGIN_ATTEMPTS na prática (ORA-28000)
+=================================================================
+▶️ Definimos FAILED_LOGIN_ATTEMPTS = 3, então na 4ª tentativa a conta bloqueia
+
+-- Saindo do SQL*Plus para conectar pela rede (Easy Connect com o IP do servidor):
+SQL> exit
+
+-- Errando a senha de propósito (3 vezes):
+$ sqlplus hr_seg/"senha_errada"@//192.168.0.68:1521/HUMAN_RESOURCES
+ORA-01017: invalid username/password; logon denied
+
+$ sqlplus hr_seg/"senha_errada"@//192.168.0.68:1521/HUMAN_RESOURCES
+ORA-01017: invalid username/password; logon denied
+
+$ sqlplus hr_seg/"senha_errada"@//192.168.0.68:1521/HUMAN_RESOURCES
+ORA-01017: invalid username/password; logon denied
+
+-- Agora, mesmo com a senha CORRETA, a conta já está bloqueada:
+$ sqlplus hr_seg/"SenhaForte#2026"@//192.168.0.68:1521/HUMAN_RESOURCES
+ORA-28000: the account is locked
+
+💡 O ACCOUNT_STATUS passa para LOCKED(TIMED). Após PASSWORD_LOCK_TIME (1 dia) ele desbloqueia sozinho.
+
+-- Desbloqueio manual pelo DBA (sem esperar o PASSWORD_LOCK_TIME):
+$ . oraenv <<< CDB1
+$ sqlplus / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> ALTER USER hr_seg ACCOUNT UNLOCK;
+
+
+=================================================================
+== 🎯 Cenário 3 — Expiração de senha e período de tolerância (ORA-28001)
+=================================================================
+▶️ PASSWORD_LIFE_TIME define a validade; PASSWORD_GRACE_TIME é o tempo extra para trocar
+
+-- Forçando a expiração imediata para demonstrar o comportamento:
+SQL> conn / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> ALTER USER hr_seg PASSWORD EXPIRE;
+
+-- Conferindo o status:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username       format a20
+SQL> col account_status format a20
+
+SQL> SELECT username,
+            account_status
+     FROM   dba_users
+     WHERE  username = 'HR_SEG';
+
+-- Ao conectar com a senha expirada, o Oracle exige a troca na hora:
+SQL> exit
+$ sqlplus hr_seg/"SenhaForte#2026"@//192.168.0.68:1521/HUMAN_RESOURCES
+ORA-28001: the password has expired
+
+Changing password for hr_seg
+New password:
+Retype new password:
+Password changed
+
+⚠️ Se a nova senha violar PASSWORD_REUSE_TIME / PASSWORD_REUSE_MAX, retorna:
+   ORA-28007: the password cannot be reused
+
+💡 Dentro do GRACE_TIME o login ainda funciona, mas com aviso de senha prestes a expirar.
+   Depois do GRACE_TIME, a troca passa a ser obrigatória.
+
+
+=================================================================
+== 🎯 Cenário 4 — Função de verificação de senha (ORA-28003)
+=================================================================
+▶️ PASSWORD_VERIFY_FUNCTION valida a complexidade da senha no momento da criação/alteração
+
+-- O Oracle já traz funções prontas. O script oficial as instala:
+SQL> conn / as sysdba
+SQL> alter session set container = HUMAN_RESOURCES;
+
+SQL> @?/rdbms/admin/utlpwdmg.sql
+
+-- Esse script cria, entre outras, a função ora12c_verify_function.
+-- Vamos vinculá-la ao nosso profile:
+SQL> ALTER PROFILE prf_app_hr LIMIT
+        PASSWORD_VERIFY_FUNCTION ora12c_verify_function;
+
+-- Tentando trocar para uma senha FRACA (curta e sem complexidade):
+SQL> ALTER USER hr_seg IDENTIFIED BY senha1;
+ORA-28003: password verification for the specified password failed
+ORA-20001: Password length less than 8 characters
+
+-- Agora com uma senha que atende às regras (maiúscula, minúscula, número e tamanho):
+SQL> ALTER USER hr_seg IDENTIFIED BY "SenhaForte#2027";
+User altered.
+
+💡 As funções prontas do 19c: ora12c_verify_function, ora12c_strong_verify_function
+   e ora12c_stig_verify_function. Você também pode escrever a sua própria.
+
+
+=================================================================
+== 🎯 Cenário 5 — Limites de recursos / KERNEL (CDB2 / SALES_HISTORY)
+=================================================================
+▶️ Limites KERNEL só passam a valer com o parâmetro RESOURCE_LIMIT = TRUE
+
+-- Alternando para o CDB2:
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+
+SQL> alter session set container = SALES_HISTORY;
+
+-- Verificando o parâmetro (por padrão vem FALSE):
+SQL> show parameter resource_limit
+
+-- Habilitando a aplicação dos limites de recurso:
+SQL> ALTER SYSTEM SET resource_limit = TRUE SCOPE = BOTH;
+
+-- Criando um profile com limites de recurso:
+SQL> CREATE PROFILE prf_sh_recursos LIMIT
+        SESSIONS_PER_USER          2
+        CONNECT_TIME               120
+        IDLE_TIME                  15
+        CPU_PER_CALL               6000
+        LOGICAL_READS_PER_SESSION  UNLIMITED
+        COMPOSITE_LIMIT            UNLIMITED;
+
+-- Criando o usuário de laboratório com esse profile:
+SQL> CREATE USER sh_lab
+        IDENTIFIED BY "SenhaForte#2026"
+        DEFAULT TABLESPACE   users
+        TEMPORARY TABLESPACE temp
+        QUOTA 50M ON users
+        PROFILE prf_sh_recursos;
+
+SQL> GRANT CREATE SESSION TO sh_lab;
+
+
+=================================================================
+== 🎯 Cenário 5.1 — SESSIONS_PER_USER na prática (ORA-02391)
+=================================================================
+▶️ Definimos SESSIONS_PER_USER = 2, então a 3ª sessão simultânea é recusada
+
+-- Terminal 1 (1ª sessão — OK):
+$ sqlplus sh_lab/"SenhaForte#2026"@//192.168.0.68:1521/SALES_HISTORY
+
+-- Terminal 2 (2ª sessão — OK):
+$ sqlplus sh_lab/"SenhaForte#2026"@//192.168.0.68:1521/SALES_HISTORY
+
+-- Terminal 3 (3ª sessão — RECUSADA):
+$ sqlplus sh_lab/"SenhaForte#2026"@//192.168.0.68:1521/SALES_HISTORY
+ORA-02391: exceeded simultaneous SESSIONS_PER_USER limit
+
+💡 IDLE_TIME e CONNECT_TIME atuam de forma parecida: a sessão é encerrada (snipped)
+   ao ultrapassar o tempo, retornando ORA-02396 / ORA-02399 na próxima chamada.
+
+
+=================================================================
+== 🎯 Cenário 6 — Alterando e trocando profiles (CDB2 / SALES_HISTORY)
+=================================================================
+-- Ajustando um limite de um profile já existente (vale para todos os usuários dele):
+SQL> conn / as sysdba
+SQL> alter session set container = SALES_HISTORY;
+
+SQL> ALTER PROFILE prf_sh_recursos LIMIT
+        SESSIONS_PER_USER 3
+        IDLE_TIME         30;
+
+-- Trocando o profile de um usuário (sem precisar recriá-lo):
+SQL> ALTER USER sh_lab PROFILE DEFAULT;
+
+-- Conferindo a troca:
+SQL> set lines 200
+SQL> set pages 200
+SQL> col username format a20
+SQL> col profile  format a20
+
+SQL> SELECT username,
+            profile
+     FROM   dba_users
+     WHERE  username = 'SH_LAB';
+
+💡 Alterar o profile do usuário tem efeito imediato nos novos logins;
+   sessões já abertas continuam com os limites antigos até reconectarem.
+
+
+=================================================================
+== 🎯 Cenário 7 — Removendo profiles com segurança (DROP PROFILE)
+=================================================================
+▶️ Se o profile ainda tem usuários vinculados, o Oracle não deixa removê-lo direto
+
+-- Tentando remover um profile em uso:
+SQL> DROP PROFILE prf_app_hr;
+ORA-02382: profile PRF_APP_HR has users assigned, cannot drop without CASCADE
+
+-- Com CASCADE, os usuários do profile voltam automaticamente para o DEFAULT:
+SQL> DROP PROFILE prf_app_hr CASCADE;
+
+⚠️ Importante: CASCADE NÃO apaga os usuários — apenas reatribui o profile deles para DEFAULT.
+   Você nunca consegue remover o profile DEFAULT (é o profile base do banco).
+
+
+=================================================================
+== 🎯 Cenário 8 — Profiles em ambiente CDB/PDB (profile comum C##)
+=================================================================
+▶️ Um profile criado dentro de uma PDB é LOCAL àquela PDB
+▶️ Um profile comum (CDB$ROOT) precisa do prefixo C## e de CONTAINER = ALL
+
+-- Criando um profile corporativo válido em todas as PDBs do CDB2:
+SQL> conn / as sysdba                      -- conectado no CDB$ROOT
+SQL> show con_name
+
+SQL> CREATE PROFILE c##prf_corp LIMIT
+        FAILED_LOGIN_ATTEMPTS  5
+        PASSWORD_LIFE_TIME     60
+        CONTAINER = ALL;
+
+-- Visão consolidada de profiles por container (CDB_PROFILES):
+SQL> set lines 200
+SQL> set pages 200
+SQL> col con_id        format 999
+SQL> col profile       format a20
+SQL> col resource_name format a26
+SQL> col limit         format a16
+
+SQL> SELECT con_id,
+            profile,
+            resource_name,
+            limit
+     FROM   cdb_profiles
+     WHERE  profile = 'C##PRF_CORP'
+       AND  resource_name IN ('FAILED_LOGIN_ATTEMPTS', 'PASSWORD_LIFE_TIME')
+     ORDER  BY con_id, resource_name;
+
+💡 DBA_PROFILES mostra os profiles do container atual; CDB_PROFILES mostra de todos.
+
+
+=================================================================
+== 🎯 Consultando profiles e usuários
+=================================================================
+$ . oraenv <<< CDB2
+$ sqlplus / as sysdba
+SQL> alter session set container = SALES_HISTORY;
+
+-- 1) Listar todos os profiles existentes (nomes distintos):
+SQL> set lines 200
+SQL> set pages 200
+SQL> col profile format a25
+
+SQL> SELECT DISTINCT profile
+     FROM   dba_profiles
+     ORDER  BY profile;
+
+-- 2) Ver só a política de senha de um profile específico:
+SQL> col resource_name format a28
+SQL> col limit         format a18
+
+SQL> SELECT resource_name,
+            limit
+     FROM   dba_profiles
+     WHERE  profile = 'PRF_SH_RECURSOS'
+       AND  resource_type = 'KERNEL'
+     ORDER  BY resource_name;
+
+-- 3) Quais usuários usam cada profile:
+SQL> col username format a20
+SQL> col profile  format a20
+SQL> col account_status format a18
+
+SQL> SELECT profile,
+            username,
+            account_status
+     FROM   dba_users
+     WHERE  oracle_maintained = 'N'
+     ORDER  BY profile, username;
+
+
+=================================================================
+== 💡 Boas Práticas
+=================================================================
+💡 Nunca deixe usuários de aplicação no profile DEFAULT — crie profiles por finalidade
+💡 Ative RESOURCE_LIMIT = TRUE se quiser que os limites KERNEL realmente valham
+💡 Use FAILED_LOGIN_ATTEMPTS para conter ataques de força bruta (mas evite valores baixos demais em contas de serviço)
+💡 Aplique PASSWORD_VERIFY_FUNCTION para garantir senhas fortes desde a criação
+💡 Defina PASSWORD_LIFE_TIME e PASSWORD_GRACE_TIME com base na política da empresa
+💡 Cuidado ao expirar/forçar troca em usuários de aplicação — pode derrubar o sistema em produção
+💡 Documente cada profile (qual aplicação usa, por quê) e monitore via DBA_PROFILES
+💡 Em CDB, decida cedo: profile local (na PDB) ou comum (C## no ROOT) conforme o escopo
+
+
+=================================================================
+== 🏁 Conclusão
+=================================================================
+▶️ Profile LIMITA, não concede — privilégio é GRANT, limite é PROFILE
+▶️ Existem dois mundos no mesmo profile: política de SENHA e limites de RECURSO
+▶️ Senha vale sempre; recurso só com RESOURCE_LIMIT = TRUE
+▶️ FAILED_LOGIN_ATTEMPTS, PASSWORD_LIFE_TIME e PASSWORD_VERIFY_FUNCTION são o trio de segurança
+▶️ ALTER USER ... PROFILE troca o profile sem recriar o usuário
+▶️ DROP PROFILE ... CASCADE devolve os usuários ao DEFAULT, sem apagá-los
+▶️ DBA_PROFILES e CDB_PROFILES são o seu raio-X de políticas no banco
+
+
+=================================================================
+== 🚀 Challenge DBA
+=================================================================
+▶️ No CDB2/ORDER_ENTRY, crie o profile prf_oe_app com FAILED_LOGIN_ATTEMPTS 4 e PASSWORD_LIFE_TIME 45
+▶️ Crie um usuário com esse profile e provoque o ORA-28000 bloqueando a conta — depois desbloqueie
+▶️ Habilite RESOURCE_LIMIT e force o ORA-02391 com SESSIONS_PER_USER 1
+▶️ Vincule a função ora12c_strong_verify_function a um profile e teste uma senha fraca
+▶️ Crie um profile comum (C##) válido em todas as PDBs do CDB2 e confirme via CDB_PROFILES
+▶️ Gere um relatório com DBA_PROFILES mostrando apenas a política de senha (RESOURCE_TYPE = 'PASSWORD')
